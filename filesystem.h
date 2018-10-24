@@ -5,14 +5,14 @@ struct FileInternals;
 // file type used by user code
 typedef struct FileInternals* File;
 
-// access mode for open_file() and create_file() 
+// access mode for open_file() and create_file()
 typedef enum {
 	READ_ONLY, READ_WRITE
 } FileMode;
 
 // error codes set in global 'fserror' by filesystem functions
 typedef enum  {
-  FS_NONE, 
+  FS_NONE,
   FS_OUT_OF_SPACE,         // the operation caused the software disk to fill up
   FS_FILE_NOT_OPEN,  	   // attempted read/write/close/etc. on file that isn’t open
   FS_FILE_OPEN,      	   // file is already open. Concurrent opens are not
@@ -38,13 +38,13 @@ File create_file(char *name, FileMode mode);
 // close 'file'.  Always sets 'fserror' global.
 void close_file(File file);
 
-// read at most 'numbytes' of data from 'file' into 'buf', starting at the 
+// read at most 'numbytes' of data from 'file' into 'buf', starting at the
 // current file position.  Returns the number of bytes read. If end of file is reached,
 // then a return value less than 'numbytes' signals this condition. Always sets
 // 'fserror' global.
 unsigned long read_file(File file, void *buf, unsigned long numbytes);
 
-// write 'numbytes' of data from 'buf' into 'file' at the current file position. 
+// write 'numbytes' of data from 'buf' into 'file' at the current file position.
 // Returns the number of bytes written. On an out of space error, the return value may be
 // less than 'numbytes'.  Always sets 'fserror' global.
 unsigned long write_file(File file, void *buf, unsigned long numbytes);
@@ -58,9 +58,9 @@ int seek_file(File file, unsigned long bytepos);
 // returns the current length of the file in bytes. Always sets 'fserror' global.
 unsigned long file_length(File file);
 
-// deletes the file named 'name', if it exists. Returns 1 on success, 0 on failure. 
-// Always sets 'fserror' global.   
-int delete_file(char *name); 
+// deletes the file named 'name', if it exists. Returns 1 on success, 0 on failure.
+// Always sets 'fserror' global.
+int delete_file(char *name);
 
 // determines if a file with 'name' exists and returns 1 if it exists, otherwise 0.
 // Always sets 'fserror' global.
@@ -72,5 +72,4 @@ void fs_print_error(void);
 
 // filesystem error code set (set by each filesystem function)
 extern FSError fserror;
- 
-}
+
