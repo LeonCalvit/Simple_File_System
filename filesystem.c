@@ -45,21 +45,22 @@ unsigned long read_file(File file, void *buf, unsigned long numbytes){
 }
 
 // write 'numbytes' of data from 'buf' into 'file' at the current file position.
-// Returns the number of bytes written. On an out of space error, the return value may be
-// less than 'numbytes'.  Always sets 'fserror' global.
+// Returns the number of bytes written. On an out of space error, the return value may be less than 'numbytes'.
+// Always sets 'fserror' global.
 unsigned long write_file(File file, void *buf, unsigned long numbytes){
 
 }
 
 // sets current position in file to 'bytepos', always relative to the
 // beginning of file.  Seeks past the current end of file should
-// extend the file. Returns 1 on success and 0 on failure.  Always
-// sets 'fserror' global.
+// extend the file. Returns 1 on success and 0 on failure.
+// Always sets 'fserror' global.
 int seek_file(File file, unsigned long bytepos){
 
 }
 
-// returns the current length of the file in bytes. Always sets 'fserror' global.
+// returns the current length of the file in bytes.
+// Always sets 'fserror' global.
 unsigned long file_length(File file){
 
 }
@@ -76,8 +77,7 @@ int file_exists(char *name){
 
 }
 
-// describe current filesystem error code by printing a descriptive message to standard
-// error.
+// describe current filesystem error code by printing a descriptive message to standard error.
 void fs_print_error(void){
     switch (fserror){
     case FS_NONE:
