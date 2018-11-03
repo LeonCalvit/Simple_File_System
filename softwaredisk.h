@@ -19,6 +19,8 @@ typedef enum  {
 // data.  Returns 1 on success, otherwise 0. Always sets global 'sderror'.
 int init_software_disk();
 
+void bzero(char *block, int blockSize);
+
 // returns the size of the SoftwareDisk in multiples of SOFTWARE_DISK_BLOCK_SIZE
 unsigned long software_disk_size();
 

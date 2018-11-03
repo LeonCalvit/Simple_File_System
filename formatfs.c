@@ -2,7 +2,7 @@
 #include <stdio.h>
 #include "softwaredisk.h"
 
-int main(int argc, char const *argv[])
+int main2(int argc, char const *argv[])
 {
     unsigned long bitmaps[SOFTWARE_DISK_BLOCK_SIZE/sizeof(unsigned long)];
     printf("Initializing Disk...\n");

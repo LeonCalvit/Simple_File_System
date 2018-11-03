@@ -3,9 +3,10 @@
 // Written by Golden G. Richard III (@nolaforensix), 10/2017.
 //
 
+#pragma warning(disable: 4996)
 #include <stdio.h>
 #include <stdlib.h>
-#include <strings.h>
+#include <string.h>
 #include "softwaredisk.h"
 
 #define NUM_BLOCKS 5000
@@ -48,6 +49,10 @@ int init_software_disk() {
     }
   }
   return 1;
+}
+
+void bzero(char *block, int blockSize) {
+	return;
 }
 
 // returns the size of the SoftwareDisk in multiples of SOFTWARE_DISK_BLOCK_SIZE

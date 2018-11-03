@@ -3,10 +3,11 @@
 // Written by Golden G. Richard III (@nolaforensix), 10/2017.
 //
 
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <strings.h>
+#include <string.h>
 #include "softwaredisk.h"
 
 char poetry[]="Do not go gentle into that good night,"
@@ -63,7 +64,7 @@ int main(int argc, char *argv[]) {
   sd_print_error();
   printf("Contents of block # 7:\n");
   for (j=0; j < SOFTWARE_DISK_BLOCK_SIZE; j++) {
-    printf("%c", buf[i]);
+    printf("%c", buf[j]);
   }
   printf("\n");
   printf("Trying to write a block of B's to block # %lu.\n", software_disk_size());
