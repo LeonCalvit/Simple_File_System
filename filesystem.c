@@ -4,7 +4,13 @@
 #include <string.h>
 #include "filesystem.h"
 
-//
+//Inode
+struct INode{
+    char name[255];
+    int  directBlock[12];
+    int  indirectBlock;
+
+}INode;
 
 // main private file type
 struct FileInternals{
