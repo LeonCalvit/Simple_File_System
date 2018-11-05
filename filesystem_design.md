@@ -4,8 +4,7 @@
 
 + File Names will be limited at 255 characters
 + Null Characters are not allowed to start the name or be part of file names.
-+ The maximum number of blocks supported for data is 7997,
-(8000 - 2 blocks of Free space management and X blocks of Inode management)
++ The maximum number of blocks supported for data is 7997, (8000 - 2 blocks of Free space management and X blocks of Inode management)
 + Block 0 and Block 1 Will be used by the filesystem to track free space
 
 ## 2 Design Choices
