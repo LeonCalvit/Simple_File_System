@@ -3,9 +3,10 @@
 // Written by Golden G. Richard III (@nolaforensix), 10/2017.
 //
 
+
 #include <stdio.h>
 #include <stdlib.h>
-#include <strings.h>
+#include <string.h>
 #include "softwaredisk.h"
 
 #define NUM_BLOCKS 5000
@@ -13,7 +14,7 @@
 
 // internals of software disk implementation
 typedef struct SoftwareDiskInternals {
-  FILE *fp;       
+  FILE *fp;
 } SoftwareDiskInternals;
 
 //
@@ -37,7 +38,7 @@ int init_software_disk() {
     sderror=SD_INTERNAL_ERROR;
     return 0;
   }
-  
+
   bzero(block, SOFTWARE_DISK_BLOCK_SIZE);
   for (i=0; i < NUM_BLOCKS; i++) {
     if (fwrite(block, SOFTWARE_DISK_BLOCK_SIZE, 1, sd.fp) != 1) {
@@ -50,13 +51,14 @@ int init_software_disk() {
   return 1;
 }
 
+
 // returns the size of the SoftwareDisk in multiples of SOFTWARE_DISK_BLOCK_SIZE
 unsigned long software_disk_size() {
 
   return NUM_BLOCKS;
 }
 
-// writes a block of data from 'buf' at location 'blocknum'.  Blocks are numbered 
+// writes a block of data from 'buf' at location 'blocknum'.  Blocks are numbered
 // from 0.  The buffer 'buf' must be of size SOFTWARE_DISK_BLOCK_SIZE.  Returns 1
 // on success or 0 on failure.  Always sets global 'sderror'.
 int write_sd_block(void *buf, unsigned long blocknum) {
@@ -64,7 +66,7 @@ int write_sd_block(void *buf, unsigned long blocknum) {
   sderror=SD_NONE;
   if (! sd.fp) {
     sd.fp=fopen(BACKING_STORE, "r+");
-    if (! sd.fp) {             
+    if (! sd.fp) {
       sderror=SD_INTERNAL_ERROR;
       return 0;
     }
@@ -93,7 +95,7 @@ int write_sd_block(void *buf, unsigned long blocknum) {
   return 1;
 }
 
-// reads a block of data into 'buf' from location 'blocknum'.  Blocks are numbered 
+// reads a block of data into 'buf' from location 'blocknum'.  Blocks are numbered
 // from 0.  The buffer 'buf' must be of size SOFTWARE_DISK_BLOCK_SIZE.  Returns 1
 // on success or 0 on failure.  Always sets global 'sderror'.
 int read_sd_block(void *buf, unsigned long blocknum) {
@@ -101,7 +103,7 @@ int read_sd_block(void *buf, unsigned long blocknum) {
   sderror=SD_NONE;
   if (! sd.fp) {
     sd.fp=fopen(BACKING_STORE, "r+");
-    if (! sd.fp) {             
+    if (! sd.fp) {
       sderror=SD_INTERNAL_ERROR;
       return 0;
     }
