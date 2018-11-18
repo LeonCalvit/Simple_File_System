@@ -1,10 +1,9 @@
-
 // main private file type: you implement this in filesystem.c
 struct FileInternals;
 
 // file type used by user code
 typedef struct FileInternals* File;
-
+#define SOFTWARE_DISK_BLOCK_SIZE 512
 // access mode for open_file() and create_file()
 typedef enum {
 	READ_ONLY, READ_WRITE
@@ -72,6 +71,12 @@ void fs_print_error(void);
 
 //initialize filesystem with starting data
 void init_fs();
+
+//Returns index of the first free block on the software disk.  If no blocks are free, returns -1
+long first_free_block();
+
+//Flip the availability flag for the appropriate block in the bitvector
+void flip_block_availability(long index);
 
 // filesystem error code set (set by each filesystem function)
 extern FSError fserror;

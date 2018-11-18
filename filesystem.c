@@ -60,6 +60,30 @@ void init_fs() {
 
 	}
 	free(buffer);
+	return;
+}
+
+//Returns index of first free block on the software disk.  If no blocks are free, returns -1
+long first_free_block()
+{
+	for (int i = 0; i < software_disk_size() - unusedBits; i++) {
+		if (bitVector[i / 8] >> i%8 & 0b1 == 0) {
+			return i;
+		}
+	}
+	return -1;
+}
+
+
+//Takes the index of the block, and flips the availability flag on the bitVector for that block
+void flip_block_availability(long index)
+{
+	if (index > software_disk_size()) {
+		puts("Hey, don't do that.");
+	}
+	else {
+		bitVector[index / 8] ^= 0b1 << index % 8; //uses xor bitmask to flip desired bit
+	}
 }
 
 File open_file(char *name, FileMode mode)
@@ -133,7 +157,7 @@ unsigned long file_length(File file)
 int delete_file(char *name)
 {
     // Delete file successfully
-    if( 1 == 1 )
+    if( 1 )
     {
         return 1;
     }
