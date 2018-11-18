@@ -70,6 +70,9 @@ int file_exists(char *name);
 // error.
 void fs_print_error(void);
 
+//initialize filesystem with starting data
+void init_fs();
+
 // filesystem error code set (set by each filesystem function)
 extern FSError fserror;
 

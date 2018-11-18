@@ -24,11 +24,49 @@ struct FileInternals
 // file type used by user code
 typedef struct FileInternals *File;
 
+//Globals
 FSError fserror;
 FileMode mode;
+unsigned char* bitVector; //A bitvector is used to efficiently mark blocks as used oravailable
+short unsigned int unusedBits; //Number of unused bits at the end of bitVector
+int initialized = 0;
+
+
+//Startup code. 
+void init_fs() {
+	initialized = 1;
+	
+	//Initializes bitvector
+	//Creates a buffer the same size as a block, then reads blocks into this buffer, and marks the bitvector if the block is available or not
+
+	bitVector = malloc(software_disk_size() / 8 + 1); //Allocates one bit for every block
+	unusedBits = software_disk_size() % 8; //If software_disk_size isn't evenly divisble by 8, then this marks how many bits aren't used.
+	unsigned char* buffer = calloc(SOFTWARE_DISK_BLOCK_SIZE, sizeof(unsigned char)); //Creates zero initialized bitvector
+	unsigned short size;
+	for(long i = 0; i < software_disk_size(); i++) {
+		if (read_sd_block(buffer, i) == 0) { //Reads block into buffer, throws an error and returns if there was an error in reading the block
+			fserror = FS_IO_ERROR;
+			fs_print_error();
+			return;
+		}
+		//Reads first two bytes of buffer, which store the number of used bytes of the block, and if that number is greater than 0, sets the appropriate bit in bitVector to true
+		for (int j = 0; j < SOFTWARE_DISK_BLOCK_SIZE; j++) {
+			size = (unsigned short)(buffer[0] << 8) + (unsigned short)buffer[1];
+			if(size > 0) {
+				bitVector[i / 8] |= 0b1 << i % 8;
+				break;
+			}
+		}
+
+	}
+	free(buffer);
+}
 
 File open_file(char *name, FileMode mode)
 {
+	if (!initialized) {
+		init_fs();
+	}
     return NULL;
 }
 
@@ -36,6 +74,9 @@ File open_file(char *name, FileMode mode)
 // position is set at byte 0.  Returns NULL on error. Always sets 'fserror' global.
 File create_file(char *name, FileMode mode)
 {
+	if (!initialized) {
+		init_fs();
+	}
     return NULL;
 }
 
@@ -51,6 +92,9 @@ void close_file(File file)
 // 'fserror' global.
 unsigned long read_file(File file, void *buf, unsigned long numbytes)
 {
+	if (!initialized) {
+		init_fs();
+	}
     return 1;
 }
 
@@ -59,6 +103,9 @@ unsigned long read_file(File file, void *buf, unsigned long numbytes)
 // Always sets 'fserror' global.
 unsigned long write_file(File file, void *buf, unsigned long numbytes)
 {
+	if (!initialized) {
+		init_fs();
+	}
     return 1;
 }
 
@@ -68,6 +115,9 @@ unsigned long write_file(File file, void *buf, unsigned long numbytes)
 // Always sets 'fserror' global.
 int seek_file(File file, unsigned long bytepos)
 {
+	if (!initialized) {
+		init_fs();
+	}
     return 1;
 }
 
@@ -83,7 +133,7 @@ unsigned long file_length(File file)
 int delete_file(char *name)
 {
     // Delete file successfully
-    If(1])
+    if( 1 == 1 )
     {
         return 1;
     }
@@ -99,7 +149,9 @@ int delete_file(char *name)
 // Always sets 'fserror' global.
 int file_exists(char *name)
 {
-
+	if (!initialized) {
+		init_fs();
+	}
     return 1;
 }
 
