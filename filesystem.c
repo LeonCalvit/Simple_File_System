@@ -2,6 +2,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include "softwaredisk.h"
 #include "filesystem.h"
 
 //Inode

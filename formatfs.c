@@ -1,7 +1,6 @@
 
 #include <stdio.h>
 #include "softwaredisk.h"
-#include "filesystem.c"
 
 int main(int argc, char const *argv[])
 {
