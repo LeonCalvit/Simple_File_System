@@ -9,10 +9,11 @@
 
 ## 2 Design Choices
 
+### Strong readers
+
 ### 2.1 Free Space Tracking
 
-In order to keep track of in use and free blocks I have decided to use ~~LiNkEd LiStS~~
-Bit Vectors to track boolean values for the use of the blocks
+In order to keep track of in use and free blocks I have decided to use Bit Vectors to track boolean values for the use of the blocks
 
 ### 2.2 File system structure
 

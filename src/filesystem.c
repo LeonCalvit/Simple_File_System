@@ -5,18 +5,24 @@
 #include "softwaredisk.h"
 #include "filesystem.h"
 
+
 //Inode
 struct INode
 {
+    char inUse;
     char name[255];
     int directBlock[12];
     int indirectBlock;
+    int num_blocks;
 } INode;
+
 
 // main private file type
 struct FileInternals
 {
+  //To Do: Keep track of file node
 
+    char open; //If the file is currently open somewhere or not
     FILE *fp;
 
 } FileInternals;
@@ -30,7 +36,8 @@ FileMode mode;
 unsigned char* bitVector; //A bitvector is used to efficiently mark blocks as used oravailable
 short unsigned int unusedBits; //Number of unused bits at the end of bitVector
 int initialized = 0;
-
+struct INode nodes[40];
+int num_nodes = 0;
 
 //Startup code.
 void init_fs()
@@ -77,7 +84,7 @@ long first_free_block()
 {
 	for (int i = 0; i < software_disk_size() - unusedBits; i++)
     {
-		if (bitVector[i / 8] >> i%8 & 0b1 == 0)
+		if ((bitVector[i / 8] >> i%8 & 0b1) == 0)
         {
 			return i;
 		}
