@@ -78,6 +78,12 @@ long first_free_block();
 //Flip the availability flag for the appropriate block in the bitvector
 void flip_block_availability(long index);
 
+//Gets the number of used bytes for the specified block
+short get_block_used_bytes(long block_num);
+
+//Gets the block number of the (num)th block of the file
+long get_block_num_from_file(File file, unsigned int num);
+
 //Takes input data of size size, and pads the data to the desired size in the inputted buffer.
 //Also places two bytes in the front to indicate how many used bytes there are.
 //Size should not be more than two smaller than desired_size

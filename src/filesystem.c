@@ -5,15 +5,17 @@
 #include "softwaredisk.h"
 #include "filesystem.h"
 
+#define NUM_BLOCKS_IN_INODE 12
+#define TOTAL_NUM_INODES 40
 
 //Inode
 struct INode
 {
     char inUse;
     char name[255];
-    int directBlock[12];
-    int indirectBlock;
-    int num_blocks;
+    int directBlock[NUM_BLOCKS_IN_INODE];
+    int indirectBlock; //The index of the block number that stores the indexes of the blocks where the rest of the data is kept.
+    int num_blocks; //Total number of blocks used for the file.
 } INode;
 
 
@@ -22,6 +24,7 @@ struct FileInternals
 {
   //To Do: Keep track of file node
 
+	struct INode* node;
     char open; //If the file is currently open somewhere or not
     FILE *fp;
 
@@ -36,8 +39,8 @@ FileMode mode;
 unsigned char* bitVector; //A bitvector is used to efficiently mark blocks as used oravailable
 short unsigned int unusedBits; //Number of unused bits at the end of bitVector
 int initialized = 0;
-struct INode nodes[40];
-int num_nodes = 0;
+struct INode* nodes[TOTAL_NUM_INODES]; //Array of statically allocated Inodes
+int num_nodes = 0;					   //Number of Inodes currently being used.
 
 //Startup code.
 void init_fs()
@@ -67,7 +70,8 @@ void init_fs()
 		//Reads first two bytes of buffer, which store the number of used bytes of the block, and if that number is greater than 0, sets the appropriate bit in bitVector to true
 		for (int j = 0; j < SOFTWARE_DISK_BLOCK_SIZE; j++)
         {
-			size = (unsigned short)(buffer[0] << 8) + (unsigned short)buffer[1];
+			size = (unsigned short)(buffer[0] << 8);
+			size += (unsigned short)buffer[1];
 			if(size > 0)
             {
 				bitVector[i / 8] |= 0b1 << i % 8;
@@ -76,6 +80,9 @@ void init_fs()
 		}
 	}
 	free(buffer);
+
+	//TODO: Initialize array of Inodes from first blocks of softwaredisk.
+
 	return;
 }
 
@@ -104,6 +111,36 @@ void flip_block_availability(long index)
     {
 		bitVector[index / 8] ^= 0b1 << index % 8; //uses xor bitmask to flip desired bit
 	}
+}
+
+//Gets the number of used bytes for the specified block
+short get_block_used_bytes(long block_num)
+{
+	unsigned char* buffer = calloc(SOFTWARE_DISK_BLOCK_SIZE, sizeof(unsigned char));
+	if (read_sd_block(buffer, block_num) == 0)
+	{
+		//Reads block into buffer, throws an error and returns if there was an error in reading the block
+		fserror = FS_IO_ERROR;
+		fs_print_error();
+		return 0;
+	}
+	short size = (unsigned short)(buffer[0] << 8);
+	size += (unsigned short)buffer[1];
+	free(buffer);
+	return size;
+}
+
+//Gets the block number of the (num)th block of the file
+long get_block_num_from_file(File file, unsigned int num)
+{
+	
+	if (num < NUM_BLOCKS_IN_INODE) {
+		return file->node->directBlock[num];
+	}
+	//TODO: if the number of the block requested is greater than the number of blocks in the array direct block,
+	//this function needs to read the contents of the indirect block as a sequence of long block numbers, and return the
+	//content of the ith-num long in that array
+	return 0;
 }
 
 File open_file(char *name, FileMode mode)
@@ -174,7 +211,9 @@ int seek_file(File file, unsigned long bytepos)
 // Always sets 'fserror' global.
 unsigned long file_length(File file)
 {
-    return 1;
+	//All but the last block use SOFTWARE_DISK_BLOCK_SIZE minus 2 bytes, then add the number of used bytes for the last block
+	unsigned long size = (file->node->num_blocks - 1) * (SOFTWARE_DISK_BLOCK_SIZE - 2) + get_block_used_bytes(get_block_num_from_file(file, file->node->num_blocks));
+    return size;
 }
 
 // deletes the file named 'name', if it exists. Returns 1 on success, 0 on failure.
@@ -182,15 +221,48 @@ unsigned long file_length(File file)
 int delete_file(char *name)
 {
     // Delete file successfully
-    if( 1 )
-    {
-        return 1;
-    }
-    else
-    {
+    if( !file_exists(name)){
         fserror=FS_FILE_NOT_FOUND;
+		fs_print_error();
         return 0;
     }
+    
+	struct INode* node = NULL;
+	int i = 0;
+	//Find the correct number of the specified INode in the array of inodes.
+	//Always finds a value because code above checks that said file exists first.
+	//Need to use the index of the INode later for swapping.
+	for(; i < num_nodes; i++) {
+		if (strcmp(name, nodes[i]->name) == 0) {
+			node = nodes[i];
+			break;
+		}
+	}
+
+	if (nodes[i]->inUse == 'y') {
+		fserror = FS_FILE_OPEN;
+		fs_print_error();
+		return 0;
+	}
+
+	if (node->num_blocks < NUM_BLOCKS_IN_INODE) { //Block numbers aren't being stored in the indirect nodes, so deleting the INode is simpler;
+		//Goes through blocks of the INode and writes zeroes to them
+		unsigned char* empty_buffer = calloc(SOFTWARE_DISK_BLOCK_SIZE, sizeof(unsigned char));
+		for (unsigned long j = 0; j < node->num_blocks; j++) {
+			write_sd_block(empty_buffer, nodes[i]->directBlock[j]);
+			flip_block_availability(nodes[i]->directBlock[j]);
+		}
+		free(empty_buffer);
+		
+	}
+	else { //More complex case
+		//TODO: handle more complex case where node numbers are being stored in the indirect node.
+	}
+	nodes[i] = nodes[num_nodes - 1];
+	num_nodes--;
+	return 1;
+    
+    
 
 }
 
@@ -202,7 +274,14 @@ int file_exists(char *name)
     {
 		init_fs();
 	}
-    return 1;
+
+	for (int i = 0; i < num_nodes; i++) {
+		if (strcmp(name, nodes[i]->name) == 0) {
+			return 1;
+		}
+	}
+
+    return 0;
 }
 
 //Takes input data of size size, and pads the data to the desired size in the inputted buffer.
