@@ -96,7 +96,7 @@ long first_free_block()
 //Takes the index of the block, and flips the availability flag on the bitVector for that block
 void flip_block_availability(long index)
 {
-	if (index > software_disk_size())
+	if(index > software_disk_size())
     {
 		puts("Hey, don't do that.");
 	}
