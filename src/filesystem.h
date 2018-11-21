@@ -79,10 +79,10 @@ long first_free_block();
 void flip_block_availability(long index);
 
 //Gets the number of used bytes for the specified block
-short get_block_used_bytes(long block_num);
+unsigned short get_block_used_bytes(long block_num);
 
 //Gets the block number of the (num)th block of the file
-long get_block_num_from_file(File file, unsigned int num);
+unsigned long get_block_num_from_file(File file, unsigned int num);
 
 //Get the block numbers in the indirect blocks of an INode
 //Input an array of longs of size num_blocks - NUM_BLOCKS_IN_INODE or else it will break.

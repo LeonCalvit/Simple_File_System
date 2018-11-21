@@ -28,7 +28,7 @@ struct FileInternals
 	FileMode mode;
 	unsigned long BytePosition; // The byte position of the pointer used in seek_file
     char open; //If the file is currently open somewhere or not
-	long byte_pos; //Position in file
+	
     FILE *fp;
 
 } FileInternals;
@@ -94,7 +94,7 @@ long first_free_block()
 {
 	for (int i = 0; i < software_disk_size() - unusedBits; i++)
     {
-		if ((bitVector[i / 8] >> i%8 & 0b1) == 0)
+		if ((bitVector[i / 8] >> (i%8) & 0b1) == 0)
         {
 			return i;
 		}
@@ -108,7 +108,7 @@ void flip_block_availability(long index)
 {
 	if(index > software_disk_size())
     {
-		puts("Hey, don't do that.");
+		puts("Error: Attempted to set availability on nonexistant block.");
 	}
 	else
     {
@@ -117,7 +117,7 @@ void flip_block_availability(long index)
 }
 
 //Gets the number of used bytes for the specified block
-short get_block_used_bytes(long block_num)
+unsigned short get_block_used_bytes(long block_num)
 {
 	unsigned char* buffer = calloc(SOFTWARE_DISK_BLOCK_SIZE, sizeof(unsigned char));
 	if (read_sd_block(buffer, block_num) == 0)
@@ -127,24 +127,30 @@ short get_block_used_bytes(long block_num)
 		fs_print_error();
 		return 0;
 	}
-	short size = (unsigned short)(buffer[0] << 8);
-	size += (unsigned short)buffer[1];
+	unsigned short size = buffer[0] << 8;
+	size |= buffer[1];
 	free(buffer);
 	return size;
 }
 
 //Gets the block number of the (num)th block of the file
-long get_block_num_from_file(File file, unsigned int num)
+unsigned long get_block_num_from_file(File file, unsigned int num)
 {
-	
+	if (num > file->node->num_blocks) {
+		fserror = FS_IO_ERROR;
+		fs_print_error();
+		return 0;
+	}
 	if (num < NUM_BLOCKS_IN_INODE)
 	{
 		return file->node->directBlock[num];
 	}
-	//TODO: if the number of the block requested is greater than the number of blocks in the array direct block,
-	//this function needs to read the contents of the indirect block as a sequence of long block numbers, and return the
-	//content of the ith-num long in that array
-	return 0;
+
+	unsigned long* indirect_blocks = malloc(sizeof(unsigned long) * (file->node->num_blocks - NUM_BLOCKS_IN_INODE));
+	get_indirect_block_nums(file->node, indirect_blocks);
+	unsigned long temp = indirect_blocks[num - NUM_BLOCKS_IN_INODE];
+	free(indirect_blocks);
+	return temp;
 }
 
 //Loads an array of longs with the contents of the indirect block
