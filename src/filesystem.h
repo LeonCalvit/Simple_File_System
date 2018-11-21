@@ -78,6 +78,14 @@ long first_free_block();
 //Flip the availability flag for the appropriate block in the bitvector
 void flip_block_availability(long index);
 
+//Takes input data of size size, and pads the data to the desired size in the inputted buffer.
+//Also places two bytes in the front to indicate how many used bytes there are.
+//Size should not be more than two smaller than desired_size
+
+//Still in testinng. Don't rely on yet
+
+void pad_block(char* input_data, short size, char* buffer, short desired_size);
+
 // filesystem error code set (set by each filesystem function)
 extern FSError fserror;
 

@@ -53,6 +53,8 @@
 *.tlog
 *.lastbuildstate
 *.log
+*.ipch
+*.user
 
 # Kernel Module Compile Results
 *.mod*
@@ -65,3 +67,4 @@ dkms.conf
 sdprivate.sd
 
 *.vscode
+
