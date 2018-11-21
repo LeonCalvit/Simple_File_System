@@ -135,7 +135,8 @@ short get_block_used_bytes(long block_num)
 long get_block_num_from_file(File file, unsigned int num)
 {
 	
-	if (num < NUM_BLOCKS_IN_INODE) {
+	if (num < NUM_BLOCKS_IN_INODE)
+	{
 		return file->node->directBlock[num];
 	}
 	//TODO: if the number of the block requested is greater than the number of blocks in the array direct block,
