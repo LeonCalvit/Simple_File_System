@@ -13,8 +13,8 @@ struct INode
 {
     char inUse;
     char name[255];
-    int directBlock[NUM_BLOCKS_IN_INODE];
-    int indirectBlock; //The index of the block number that stores the indexes of the blocks where the rest of the data is kept.
+    unsigned long directBlock[NUM_BLOCKS_IN_INODE];
+    unsigned long indirectBlock; //The index of the block number that stores the indexes of the blocks where the rest of the data is kept.
     int num_blocks; //Total number of blocks used for the file.
 } INode;
 
@@ -26,6 +26,7 @@ struct FileInternals
 
 	struct INode* node;
     char open; //If the file is currently open somewhere or not
+	long byte_pos; //Position in file
     FILE *fp;
 
 } FileInternals;
@@ -143,6 +144,27 @@ long get_block_num_from_file(File file, unsigned int num)
 	return 0;
 }
 
+//Loads an array of longs with the contents of the indirect block
+void get_indirect_block_nums(struct INode* node, long * buf)
+{
+	unsigned long* indirect_block = (unsigned long)calloc(SOFTWARE_DISK_BLOCK_SIZE, sizeof(unsigned char));
+	if (read_sd_block(indirect_block, node->indirectBlock) == 0)
+	{
+		//Reads block into buffer, throws an error and returns if there was an error in reading the block
+		fserror = FS_IO_ERROR;
+		fs_print_error();
+		free(indirect_block);
+		return;
+	}
+
+	for (int i = 0; i < (node->num_blocks - NUM_BLOCKS_IN_INODE); i++) { //num_blocks - NUM_BLOCKS_IN_INODE is the number of blocks in the indirect node
+		buf[i] = indirect_block[i];
+	}
+
+	free(indirect_block);
+	return;
+}
+
 File open_file(char *name, FileMode mode)
 {
 	if (!initialized)
@@ -245,19 +267,32 @@ int delete_file(char *name)
 		return 0;
 	}
 
+	unsigned char* empty_buffer = calloc(SOFTWARE_DISK_BLOCK_SIZE, sizeof(unsigned char));
 	if (node->num_blocks < NUM_BLOCKS_IN_INODE) { //Block numbers aren't being stored in the indirect nodes, so deleting the INode is simpler;
 		//Goes through blocks of the INode and writes zeroes to them
-		unsigned char* empty_buffer = calloc(SOFTWARE_DISK_BLOCK_SIZE, sizeof(unsigned char));
+		
 		for (unsigned long j = 0; j < node->num_blocks; j++) {
 			write_sd_block(empty_buffer, nodes[i]->directBlock[j]);
 			flip_block_availability(nodes[i]->directBlock[j]);
 		}
-		free(empty_buffer);
+		
 		
 	}
 	else { //More complex case
-		//TODO: handle more complex case where node numbers are being stored in the indirect node.
+		
+		for (unsigned long j = 0; j < NUM_BLOCKS_IN_INODE; j++) { //Free all the blocks in the direct node
+			write_sd_block(empty_buffer, nodes[i]->directBlock[j]);
+			flip_block_availability(nodes[i]->directBlock[j]);
+		}
+		unsigned long* indirect_blocks = malloc(sizeof(unsigned long) * (node->num_blocks - NUM_BLOCKS_IN_INODE));
+		get_indirect_block_nums(node, indirect_blocks);
+		for (unsigned long j = 0; j < nodes[i]->num_blocks - NUM_BLOCKS_IN_INODE; j++) {//Free all the blocks in the indirect node
+			write_sd_block(empty_buffer, indirect_blocks[j]);
+			flip_block_availability(indirect_blocks[j]);
+		}
+		free(indirect_blocks);
 	}
+	free(empty_buffer);
 	nodes[i] = nodes[num_nodes - 1];
 	num_nodes--;
 	return 1;
