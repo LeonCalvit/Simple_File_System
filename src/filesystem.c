@@ -25,6 +25,7 @@ struct FileInternals
   //To Do: Keep track of file node
 
 	struct INode* node;
+	FileMode mode;
 	unsigned long BytePosition; // The byte position of the pointer used in seek_file
     char open; //If the file is currently open somewhere or not
     FILE *fp;
