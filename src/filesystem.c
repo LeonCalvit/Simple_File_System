@@ -12,7 +12,7 @@
 //Inode
 struct INode
 {
-    char inUse;
+    FileMode mode;
     char name[255];
     unsigned long directBlock[NUM_BLOCKS_IN_INODE];
     unsigned long indirectBlock; //The index of the block number that stores the indexes of the blocks where the rest of the data is kept.
