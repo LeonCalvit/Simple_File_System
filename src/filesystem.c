@@ -146,6 +146,28 @@ unsigned short get_block_used_bytes(long block_num)
 	return size;
 }
 
+
+//Loads an array of longs with the contents of the indirect block
+void get_indirect_block_nums(struct INode* node,unsigned long * buf)
+{
+	unsigned long* indirect_block = calloc(SOFTWARE_DISK_BLOCK_SIZE, sizeof(unsigned char));
+	if (read_sd_block(indirect_block, node->indirectBlock) == 0)
+	{
+		//Reads block into buffer, throws an error and returns if there was an error in reading the block
+		fserror = FS_IO_ERROR;
+		fs_print_error();
+		free(indirect_block);
+		return;
+	}
+
+	for (unsigned int i = 0; i < (node->num_blocks - NUM_BLOCKS_IN_INODE); i++) { //num_blocks - NUM_BLOCKS_IN_INODE is the number of blocks in the indirect node
+		buf[i] = indirect_block[i];
+	}
+
+	free(indirect_block);
+	return;
+}
+
 //Gets the block number of the (num)th block of the file
 unsigned long get_block_num_from_file(File file, unsigned int num)
 {
