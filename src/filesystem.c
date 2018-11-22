@@ -8,6 +8,7 @@
 #define NUM_BLOCKS_IN_INODE 12
 #define TOTAL_NUM_INODES 40
 
+// ------------------------STRUCTS-------------------------
 //Inode
 struct INode
 {
@@ -37,7 +38,8 @@ struct FileInternals
 // file type used by user code
 typedef struct FileInternals *File;
 
-//Globals
+
+//---------------------Globals-------------------------
 FSError fserror;
 FileMode mode;
 unsigned char* bitVector; //A bitvector is used to efficiently mark blocks as used oravailable
@@ -45,6 +47,8 @@ short unsigned int unusedBits; //Number of unused bits at the end of bitVector
 int initialized = 0;
 struct INode* nodes[TOTAL_NUM_INODES]; //Array of statically allocated Inodes
 int num_nodes = 0;					   //Number of Inodes currently being used.
+
+//----------------------Helper Functions-------------------
 
 // Init a new file
 void init_file(File f)
@@ -188,27 +192,11 @@ unsigned long get_block_num_from_file(File file, unsigned int num)
 	return temp;
 }
 
-//Loads an array of longs with the contents of the indirect block
-void get_indirect_block_nums(struct INode* node, long * buf)
-{
-	unsigned long* indirect_block = calloc(SOFTWARE_DISK_BLOCK_SIZE, sizeof(unsigned char));
-	if (read_sd_block(indirect_block, node->indirectBlock) == 0)
-	{
-		//Reads block into buffer, throws an error and returns if there was an error in reading the block
-		fserror = FS_IO_ERROR;
-		fs_print_error();
-		free(indirect_block);
-		return;
-	}
+// ----------------------------------------------------------
 
-	for (unsigned int i = 0; i < (node->num_blocks - NUM_BLOCKS_IN_INODE); i++) { //num_blocks - NUM_BLOCKS_IN_INODE is the number of blocks in the indirect node
-		buf[i] = indirect_block[i];
-	}
 
-	free(indirect_block);
-	return;
-}
 
+//------------------Needed Functions--------------------
 File open_file(char *name, FileMode mode)
 {
 	if (!initialized)
