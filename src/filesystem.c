@@ -236,6 +236,22 @@ int seek_file(File file, unsigned long bytepos)
     {
 		init_fs();
 	}
+	if(!file_exists(file->name))
+	{
+		fserror = FS_FILE_NOT_FOUND;
+		fs_print_error();
+		return 0;
+	}
+	if(bytepos < file_length(file))
+	{
+		file->BytePosition = bytepos;
+		return 1;
+	}
+	else
+	{
+		//TODO: More complex case of if the bytepos is bigger than the file
+	}
+
     return 1;
 }
 
