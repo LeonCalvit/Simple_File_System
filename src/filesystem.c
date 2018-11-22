@@ -208,6 +208,14 @@ File create_file(char *name, FileMode mode)
     {
 		init_fs();
 	}
+	// init in volitile file struct
+	File f;
+	init_file(f);
+	f->name = name;
+
+	// find INode home
+
+
     return NULL;
 }
 
