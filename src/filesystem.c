@@ -28,6 +28,7 @@ struct FileInternals
 	FileMode mode;
 	unsigned long BytePosition; // The byte position of the pointer used in seek_file
     char open; //If the file is currently open somewhere or not
+	char* name;
 	
     FILE *fp;
 
@@ -73,8 +74,8 @@ void init_fs()
 		//Reads first two bytes of buffer, which store the number of used bytes of the block, and if that number is greater than 0, sets the appropriate bit in bitVector to true
 		for (int j = 0; j < SOFTWARE_DISK_BLOCK_SIZE; j++)
         {
-			size = (unsigned short)(buffer[0] << 8);
-			size += (unsigned short)buffer[1];
+			size = buffer[0] << 8;
+			size |= buffer[1];
 			if(size > 0)
             {
 				bitVector[i / 8] |= 0b1 << i % 8;
@@ -92,7 +93,7 @@ void init_fs()
 //Returns index of first free block on the software disk.  If no blocks are free, returns -1
 long first_free_block()
 {
-	for (int i = 0; i < software_disk_size() - unusedBits; i++)
+	for (long i = 0; i < software_disk_size() - unusedBits; i++)
     {
 		if ((bitVector[i / 8] >> (i%8) & 0b1) == 0)
         {
@@ -284,8 +285,6 @@ int delete_file(char *name)
 			write_sd_block(empty_buffer, nodes[i]->directBlock[j]);
 			flip_block_availability(nodes[i]->directBlock[j]);
 		}
-		
-		
 	}
 	else { //More complex case
 		
@@ -305,9 +304,6 @@ int delete_file(char *name)
 	nodes[i] = nodes[num_nodes - 1];
 	num_nodes--;
 	return 1;
-    
-    
-
 }
 
 // determines if a file with 'name' exists and returns 1 if it exists, otherwise 0.
