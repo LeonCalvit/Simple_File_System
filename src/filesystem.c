@@ -15,7 +15,7 @@ struct INode
     char name[255];
     unsigned long directBlock[NUM_BLOCKS_IN_INODE];
     unsigned long indirectBlock; //The index of the block number that stores the indexes of the blocks where the rest of the data is kept.
-    int num_blocks; //Total number of blocks used for the file.
+    unsigned int num_blocks; //Total number of blocks used for the file.
 } INode;
 
 
@@ -62,7 +62,7 @@ void init_fs()
 
     unsigned char* buffer = calloc(SOFTWARE_DISK_BLOCK_SIZE, sizeof(unsigned char)); //Creates zero initialized bitvector
 	unsigned short size;
-	for(long i = 0; i < software_disk_size(); i++)
+	for(unsigned long i = 0; i < software_disk_size(); i++)
     {
 		if (read_sd_block(buffer, i) == 0)
         {
@@ -93,7 +93,7 @@ void init_fs()
 //Returns index of first free block on the software disk.  If no blocks are free, returns -1
 long first_free_block()
 {
-	for (long i = 0; i < software_disk_size() - unusedBits; i++)
+	for (unsigned long i = 0; i < software_disk_size() - unusedBits; i++)
     {
 		if ((bitVector[i / 8] >> (i%8) & 0b1) == 0)
         {
@@ -105,7 +105,7 @@ long first_free_block()
 
 
 //Takes the index of the block, and flips the availability flag on the bitVector for that block
-void flip_block_availability(long index)
+void flip_block_availability(unsigned long index)
 {
 	if(index > software_disk_size())
     {
@@ -157,7 +157,7 @@ unsigned long get_block_num_from_file(File file, unsigned int num)
 //Loads an array of longs with the contents of the indirect block
 void get_indirect_block_nums(struct INode* node, long * buf)
 {
-	unsigned long* indirect_block = (unsigned long)calloc(SOFTWARE_DISK_BLOCK_SIZE, sizeof(unsigned char));
+	unsigned long* indirect_block = calloc(SOFTWARE_DISK_BLOCK_SIZE, sizeof(unsigned char));
 	if (read_sd_block(indirect_block, node->indirectBlock) == 0)
 	{
 		//Reads block into buffer, throws an error and returns if there was an error in reading the block
@@ -167,7 +167,7 @@ void get_indirect_block_nums(struct INode* node, long * buf)
 		return;
 	}
 
-	for (int i = 0; i < (node->num_blocks - NUM_BLOCKS_IN_INODE); i++) { //num_blocks - NUM_BLOCKS_IN_INODE is the number of blocks in the indirect node
+	for (unsigned int i = 0; i < (node->num_blocks - NUM_BLOCKS_IN_INODE); i++) { //num_blocks - NUM_BLOCKS_IN_INODE is the number of blocks in the indirect node
 		buf[i] = indirect_block[i];
 	}
 

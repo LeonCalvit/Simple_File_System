@@ -76,7 +76,7 @@ void init_fs();
 long first_free_block();
 
 //Flip the availability flag for the appropriate block in the bitvector
-void flip_block_availability(long index);
+void flip_block_availability(unsigned long index);
 
 //Gets the number of used bytes for the specified block
 unsigned short get_block_used_bytes(long block_num);
