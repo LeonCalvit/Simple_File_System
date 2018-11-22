@@ -298,7 +298,7 @@ int delete_file(char *name)
 		fs_print_error();
         return 0;
     }
-    
+
 	struct INode* node = NULL;
 	int i = 0;
 	//Find the correct number of the specified INode in the array of inodes.
@@ -311,7 +311,7 @@ int delete_file(char *name)
 		}
 	}
 
-	if (nodes[i]->inUse == 'y') {
+	if (nodes[i]->mode != NULL) {
 		fserror = FS_FILE_OPEN;
 		fs_print_error();
 		return 0;
