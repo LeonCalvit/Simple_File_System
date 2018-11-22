@@ -46,6 +46,18 @@ int initialized = 0;
 struct INode* nodes[TOTAL_NUM_INODES]; //Array of statically allocated Inodes
 int num_nodes = 0;					   //Number of Inodes currently being used.
 
+// Init a new file
+void init_file(File f)
+{
+	f->node = NULL;
+	f->mode = NULL;
+	f->BytePosition = 0;
+	f->name = NULL;
+	f->fp = NULL;
+}
+
+
+
 //Startup code.
 void init_fs()
 {
