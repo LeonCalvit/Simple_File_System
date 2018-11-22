@@ -13,13 +13,13 @@
 struct INode
 {
     FileMode mode;
-    char name[255];
+    char* name;
     unsigned long directBlock[NUM_BLOCKS_IN_INODE];
     unsigned long indirectBlock; //The index of the block number that stores the indexes of the blocks where the rest of the data is kept.
     unsigned int num_blocks; //Total number of blocks used for the file.
 } INode;
 
-
+typedef struct INode *inode;
 // main private file type
 struct FileInternals
 {
@@ -55,6 +55,13 @@ void init_file(File f)
 	f->fp = NULL;
 }
 
+void init_inode(inode i)
+{
+	i->name ="";
+	i->mode = NULL;
+	i->num_blocks=0;
+	for(int l = 0; l<NUM_BLOCKS_IN_INODE; l++){i->directBlock[l]=0;}
+}
 
 
 //Startup code.
@@ -185,6 +192,16 @@ unsigned long get_block_num_from_file(File file, unsigned int num)
 	unsigned long temp = indirect_blocks[num - NUM_BLOCKS_IN_INODE];
 	free(indirect_blocks);
 	return temp;
+}
+
+unsigned long get_next_free_Inode()
+{
+	inode node;
+	init_inode(node);
+	for(int i = 3 ; i <= 2+TOTAL_NUM_INODES; i++)
+	{
+		read_sd_block(sizof(node),i);
+	}
 }
 
 // ----------------------------------------------------------
