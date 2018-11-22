@@ -201,8 +201,7 @@ File open_file(char *name, FileMode mode)
     return NULL;
 }
 
-// create and open new file with pathname 'name' and access mode 'mode'.  Current file
-// position is set at byte 0.  Returns NULL on error. Always sets 'fserror' global.
+// create and open new file with pathname 'name' and access mode 'mode'.  Current file position is set at byte 0.  Returns NULL on error. Always sets 'fserror' global.
 File create_file(char *name, FileMode mode)
 {
 	if (!initialized)
