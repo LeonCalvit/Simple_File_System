@@ -21,13 +21,13 @@ int init_software_disk();
 
 // returns the size of the SoftwareDisk in multiples of SOFTWARE_DISK_BLOCK_SIZE
 unsigned long software_disk_size();
-void bzero(char* buf, long size);
-// writes a block of data from 'buf' at location 'blocknum'.  Blocks are numbered 
+
+// writes a block of data from 'buf' at location 'blocknum'.  Blocks are numbered
 // from 0.  The buffer 'buf' must be of size SOFTWARE_DISK_BLOCK_SIZE.  Returns 1
 // on success or 0 on failure.  Always sets global 'sderror'.
 int write_sd_block(void *buf, unsigned long blocknum);
 
-// reads a block of data into 'buf' from location 'blocknum'.  Blocks are numbered 
+// reads a block of data into 'buf' from location 'blocknum'.  Blocks are numbered
 // from 0.  The buffer 'buf' must be of size SOFTWARE_DISK_BLOCK_SIZE.  Returns 1
 // on success or 0 on failure.  Always sets global 'sderror'.
 int read_sd_block(void *buf, unsigned long blocknum);
