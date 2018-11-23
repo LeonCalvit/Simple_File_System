@@ -70,23 +70,23 @@ int file_exists(char *name);
 void fs_print_error(void);
 
 //initialize filesystem with starting data
-void init_fs();
+//void init_fs();
 
 //Returns index of the first free block on the software disk.  If no blocks are free, returns -1
-long first_free_block();
+//long first_free_block();
 
 //Flip the availability flag for the appropriate block in the bitvector
-void flip_block_availability(unsigned long index);
+//void flip_block_availability(unsigned long index);
 
 //Gets the number of used bytes for the specified block
-unsigned short get_block_used_bytes(long block_num);
+//unsigned short get_block_used_bytes(long block_num);
 
 //Gets the block number of the (num)th block of the file
-unsigned long get_block_num_from_file(File file, unsigned int num);
+//unsigned long get_block_num_from_file(File file, unsigned int num);
 
 //Get the block numbers in the indirect blocks of an INode
 //Input an array of longs of size num_blocks - NUM_BLOCKS_IN_INODE or else it will break.
-void get_indirect_block_nums(struct INode* node, long* buf);
+//void get_indirect_block_nums(struct INode* node, long* buf);
 
 //Takes input data of size size, and pads the data to the desired size in the inputted buffer.
 //Also places two bytes in the front to indicate how many used bytes there are.
@@ -94,7 +94,7 @@ void get_indirect_block_nums(struct INode* node, long* buf);
 
 //Still in testinng. Don't rely on yet
 
-void pad_block(char* input_data, short size, char* buffer, short desired_size);
+//void pad_block(char* input_data, short size, char* buffer, short desired_size);
 
 // filesystem error code set (set by each filesystem function)
 extern FSError fserror;
