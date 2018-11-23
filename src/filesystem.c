@@ -347,14 +347,17 @@ int delete_file(char *name)
 	//Find the correct number of the specified INode in the array of inodes.
 	//Always finds a value because code above checks that said file exists first.
 	//Need to use the index of the INode later for swapping.
-	for(; i < num_nodes; i++) {
-		if (strcmp(name, nodes[i]->name) == 0) {
+	for(; i < num_nodes; i++)
+	{
+		if (strcmp(name, nodes[i]->name) == 0)
+		{
 			node = nodes[i];
 			break;
 		}
 	}
 
-	if (nodes[i]->mode != Closed) {
+	if (node->mode != Closed)
+	{
 		fserror = FS_FILE_OPEN;
 		fs_print_error();
 		return 0;
@@ -364,14 +367,17 @@ int delete_file(char *name)
 	if (node->num_blocks < NUM_BLOCKS_IN_INODE) { //Block numbers aren't being stored in the indirect nodes, so deleting the INode is simpler;
 		//Goes through blocks of the INode and writes zeroes to them
 
-		for (unsigned long j = 0; j < node->num_blocks; j++) {
+		for (unsigned long j = 0; j < node->num_blocks; j++)
+		{
 			write_sd_block(empty_buffer, nodes[i]->directBlock[j]);
 			flip_block_availability(nodes[i]->directBlock[j]);
 		}
 	}
-	else { //More complex case
+	else
+	{ //More complex case
 
-		for (unsigned long j = 0; j < NUM_BLOCKS_IN_INODE; j++) { //Free all the blocks in the direct node
+		for (unsigned long j = 0; j < NUM_BLOCKS_IN_INODE; j++)
+		{ //Free all the blocks in the direct node
 			write_sd_block(empty_buffer, nodes[i]->directBlock[j]);
 			flip_block_availability(nodes[i]->directBlock[j]);
 		}
