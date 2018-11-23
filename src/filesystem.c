@@ -166,7 +166,8 @@ void get_indirect_block_nums(struct INode* node,unsigned long * buf)
 		return;
 	}
 
-	for (unsigned int i = 0; i < (node->num_blocks - NUM_BLOCKS_IN_INODE); i++) { //num_blocks - NUM_BLOCKS_IN_INODE is the number of blocks in the indirect node
+	for (unsigned int i = 0; i < (node->num_blocks - NUM_BLOCKS_IN_INODE); i++)
+	{ //num_blocks - NUM_BLOCKS_IN_INODE is the number of blocks in the indirect node
 		buf[i] = indirect_block[i];
 	}
 
