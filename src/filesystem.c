@@ -408,7 +408,7 @@ int file_exists(char *name)
 }
 
 
-// describe current filesystem error code by printing a descriptive message to standard error.
+// describes the current filesystem error code by printing a descriptive message to standard error.
 void fs_print_error(void)
 {
     switch (fserror)
