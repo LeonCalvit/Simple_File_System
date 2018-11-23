@@ -1,7 +1,7 @@
 
 #include <stdio.h>
 #include "softwaredisk.h"
-#include "filesystem.c"
+
 int main(int argc, char const *argv[])
 {
     unsigned char bitmaps[SOFTWARE_DISK_BLOCK_SIZE/sizeof(char)];
@@ -18,7 +18,7 @@ int main(int argc, char const *argv[])
 
     for(int i =0; i<40; i++)
     {
-        write_sd_block(INode,i);
+        //write_sd_block(INode,i);
     }
 
     //TODO: Create inode registration blocks and mark them in use
