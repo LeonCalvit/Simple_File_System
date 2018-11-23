@@ -7,7 +7,10 @@
 int main(int argc, char *argv[])
 {
     printf("Initializing Disk...\n");
-    System("./initfs");
+    system("./initfs.out");
+
+    File f=create_file("BIlly",READ_ONLY);
+    write_file(f,"Hello",6);
 
 
     return 0;

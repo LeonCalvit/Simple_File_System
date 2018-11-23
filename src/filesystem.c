@@ -2,7 +2,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include "softwaredisk.h"
+#include "softwaredisk.c"
 #include "filesystem.h"
 
 #define NUM_BLOCKS_IN_INODE 12
@@ -49,7 +49,7 @@ int num_nodes = 0;					   //Number of Inodes currently being used.
 void init_file(File f)
 {
 	f->node = NULL;
-	f->mode = NULL;
+	f->mode = Closed;
 	f->BytePosition = 0;
 	f->name = NULL;
 	f->fp = NULL;
@@ -58,7 +58,7 @@ void init_file(File f)
 void init_inode(inode i)
 {
 	i->name ="";
-	i->mode = NULL;
+	i->mode = Closed;
 	i->num_blocks=0;
 	for(int l = 0; l<NUM_BLOCKS_IN_INODE; l++){i->directBlock[l]=0;}
 }
@@ -200,7 +200,7 @@ unsigned long get_next_free_Inode()
 	init_inode(node);
 	for(int i = 3 ; i <= 2+TOTAL_NUM_INODES; i++)
 	{
-		read_sd_block(sizof(node),i);
+		read_sd_block(sizeof(node),i);
 	}
 }
 
@@ -328,7 +328,7 @@ int delete_file(char *name)
 		}
 	}
 
-	if (nodes[i]->mode != NULL) {
+	if (nodes[i]->mode != Closed) {
 		fserror = FS_FILE_OPEN;
 		fs_print_error();
 		return 0;

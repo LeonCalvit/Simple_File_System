@@ -6,7 +6,7 @@ typedef struct FileInternals* File;
 #define SOFTWARE_DISK_BLOCK_SIZE 512
 // access mode for open_file() and create_file()
 typedef enum {
-	READ_ONLY, READ_WRITE
+	READ_ONLY, READ_WRITE, Closed /*Not so sure I lke having editied this in .h...*/
 } FileMode;
 
 // error codes set in global 'fserror' by filesystem functions

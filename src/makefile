@@ -2,18 +2,12 @@ CC=gcc
 CFLAGS=-Wall
 DEPS = filesystem.c softwaredisk.c
 
-%.o: %.c $(DEPS)
-	$(CC) -c -o $@ $< $(CFLAGS)
+initfs: formatfs.c softwaredisk.c
+	gcc -o initfs.out formatfs.c softwaredisk.c -I.
 
-initfs: formatfs.c
-	$(CC) $(CFLAGS)
-
-test1 : test1.c
-	$(CC) -o $@ $^ $(CFLAGS)
-
-test2 : test2.c
-	$(CC) -o $@ $^ $(CFLAGS)
+test1: filesystem.c test1.c
+	gcc -o test1.out filesystem.c test1.c -I.
 
 
 clean:
-	rm *.o prog3
+	rm *.out
