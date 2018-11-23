@@ -196,6 +196,30 @@ unsigned long get_block_num_from_file(File file, unsigned int num)
 	return temp;
 }
 
+//Takes input data of size size, and pads the data to the desired size in the inputted buffer.
+//Also places two bytes in the front to indicate how many used bytes there are.
+//Size should not be more than two smaller than desired_size
+
+//Still in testing. Don't rely on yet
+
+void pad_block(char * input_data, short size, char* buffer, short desired_size)
+{
+	if (desired_size - 2 < size)
+	{
+		puts("Hey, don't do that.");
+		return;
+	}
+	buffer[0] = (desired_size >> 8) & 0xFF;
+	buffer[1] = desired_size & 0xFF;
+	for (int i = 2; i < size + 2; i++)
+	{
+		buffer[i] = input_data[i - 2];
+	}
+
+	return;
+}
+
+// Retrieves the next free Inode block number from disk
 unsigned long get_next_free_Inode()
 {
 	inode node;
@@ -383,26 +407,6 @@ int file_exists(char *name)
     return 0;
 }
 
-//Takes input data of size size, and pads the data to the desired size in the inputted buffer.
-//Also places two bytes in the front to indicate how many used bytes there are.
-//Size should not be more than two smaller than desired_size
-
-//Still in testing. Don't rely on yet
-
-void pad_block(char * input_data, short size, char* buffer, short desired_size)
-{
-	if (desired_size - 2 < size) {
-		puts("Hey, don't do that.");
-		return;
-	}
-	buffer[0] = (desired_size >> 8) & 0xFF;
-	buffer[1] = desired_size & 0xFF;
-	for (int i = 2; i < size + 2; i++) {
-		buffer[i] = input_data[i - 2];
-	}
-
-	return;
-}
 
 // describe current filesystem error code by printing a descriptive message to standard error.
 void fs_print_error(void)
