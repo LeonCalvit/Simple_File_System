@@ -178,7 +178,8 @@ void get_indirect_block_nums(struct INode* node,unsigned long * buf)
 //Gets the block number of the (num)th block of the file
 unsigned long get_block_num_from_file(File file, unsigned int num)
 {
-	if (num > file->node->num_blocks) {
+	if (num > file->node->num_blocks)
+	{
 		fserror = FS_IO_ERROR;
 		fs_print_error();
 		return 0;
