@@ -212,6 +212,7 @@ void write_inode_to_disk(int inode_index)
 
 	//Write to disk
 	write_sd_block(buffer, inode_index + 2);
+	free(buffer);
 }
 
 void write_fs_to_disk()
