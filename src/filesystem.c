@@ -403,8 +403,8 @@ int delete_file(char *name)
 
 		for (unsigned long j = 0; j < node->num_blocks; j++)
 		{
-			write_sd_block(empty_buffer, nodes[i]->directBlock[j]);
-			flip_block_availability(nodes[i]->directBlock[j]);
+			write_sd_block(empty_buffer, nodes[i].directBlock[j]);
+			flip_block_availability(nodes[i].directBlock[j]);
 		}
 	}
 	else
@@ -412,8 +412,8 @@ int delete_file(char *name)
 
 		for (unsigned long j = 0; j < NUM_BLOCKS_IN_INODE; j++)
 		{ //Free all the blocks in the direct node
-			write_sd_block(empty_buffer, nodes[i]->directBlock[j]);
-			flip_block_availability(nodes[i]->directBlock[j]);
+			write_sd_block(empty_buffer, nodes[i].directBlock[j]);
+			flip_block_availability(nodes[i].directBlock[j]);
 		}
 		unsigned long* indirect_blocks = malloc(sizeof(unsigned long) * (node->num_blocks - NUM_BLOCKS_IN_INODE));
 		get_indirect_block_nums(node, indirect_blocks);
