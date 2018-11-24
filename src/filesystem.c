@@ -222,6 +222,7 @@ void pad_block(char * input_data, short size, char* buffer, short desired_size)
 }
 
 // Retrieves the next free Inode block number from disk
+//What does this do? It doesn't seem to get the next free Inode, and it's easy to get that at nodes[num_nodes]
 unsigned long get_next_free_Inode()
 {
 	return 0;
