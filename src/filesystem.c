@@ -111,7 +111,7 @@ void init_fs()
 			//Reads first two bytes of buffer, which store the number of used bytes of the block, and if that number is greater than 0, sets the appropriate bit in bitVector to true
 			size = buffer[0] << 8;
 			size |= buffer[1];
-			
+
 			if (size > 0)
 			{
 				bitVector[i / 8] |= 0b1 << i % 8;
@@ -181,6 +181,45 @@ void init_fs()
 	8 bytes for the indirect block containing the array of indexes of the indirect blocks
 	For the default NUM_BLOCK_IN_INODE value of 12, there should be 147 bytes remaining of the 512 bytes block
 	*/
+	return;
+}
+
+void write_inode_to_disk(int inode_index)
+{
+	unsigned short used_bytes = MAX_NAME_LENGTH + sizeof(unsigned int) + sizeof(unsigned long) * NUM_BLOCKS_IN_INODE;
+	unsigned char* buffer = malloc(SOFTWARE_DISK_BLOCK_SIZE);
+	buffer[0] = (used_bytes >> 8) & 0xFF;
+	buffer[1] = used_bytes & 0xFF;
+	strcpy(buffer + sizeof(unsigned short), nodes[inode_index].name);
+
+	
+	//Write the number of blocks used to disk.
+	for (int j = 0; j < sizeof(unsigned int); j++) {
+		buffer[(sizeof(unsigned short) + MAX_NAME_LENGTH) + j] = (nodes[inode_index].num_blocks >> ((sizeof(unsigned int) - j) * 8)) & 0xFF;
+	}
+	
+	//Write direct blocks to buffer
+	for (int i = 0; i < NUM_BLOCKS_IN_INODE; i++) {
+		for (int j = 0; j < sizeof(unsigned long); j++) {
+			buffer[sizeof(unsigned short) + MAX_NAME_LENGTH + sizeof(unsigned int) + i + j] = (nodes[inode_index].directBlock[i] >> ((sizeof(unsigned long) - j) * 8)) & 0xFF;
+		}
+	}
+
+	//Write index of indirect block storage
+	for (int i = 0; i < sizeof(unsigned long); i++) {
+		buffer[(sizeof(unsigned short) + MAX_NAME_LENGTH) + sizeof(unsigned int) + sizeof(unsigned long) * NUM_BLOCKS_IN_INODE + i] = (nodes[inode_index].indirectBlock >> ((sizeof(unsigned long) - i) * 8)) & 0xFF;
+	}
+
+	//Write to disk
+	write_sd_block(buffer, inode_index + 2);
+}
+
+void write_fs_to_disk()
+{
+	for (int i = 0; i < NUM_BLOCKS_IN_INODE; i++) 
+	{ 
+		write_inode_to_disk(i);
+	}
 	return;
 }
 
@@ -310,11 +349,6 @@ unsigned long get_next_free_Inode()
 		unsigned char* buffer = calloc(SOFTWARE_DISK_BLOCK_SIZE, sizeof(unsigned char));
 		read_sd_block(buffer, i);
 	}
-}
-
-void write_fs_to_disk()
-{
-	return;
 }
 
 // ----------------------------------------------------------
