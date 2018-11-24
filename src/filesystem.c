@@ -226,7 +226,8 @@ unsigned long get_next_free_Inode()
 	init_inode(node);
 	for(int i = 3 ; i <= 2+TOTAL_NUM_INODES; i++)
 	{
-		read_sd_block(sizeof(node),i);
+		unsigned char* buffer = calloc(SOFTWARE_DISK_BLOCK_SIZE, sizeof(unsigned char));
+		read_sd_block(buffer,i);
 	}
 }
 
@@ -250,6 +251,12 @@ File create_file(char *name, FileMode mode)
 	if (!initialized)
     {
 		init_fs();
+	}
+	if(file_exists(name))
+	{
+		fserror = FS_FILE_ALREADY_EXISTS;
+		fs_print_error();
+		return NULL;
 	}
 	// init in volitile file struct
 	File f;
