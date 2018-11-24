@@ -109,19 +109,18 @@ void init_fs()
 				return;
 			}
 			//Reads first two bytes of buffer, which store the number of used bytes of the block, and if that number is greater than 0, sets the appropriate bit in bitVector to true
-			for (int j = 0; j < SOFTWARE_DISK_BLOCK_SIZE; j++)
+			size = buffer[0] << 8;
+			size |= buffer[1];
+			
+			if (size > 0)
 			{
-				size = buffer[0] << 8;
-				size |= buffer[1];
-				if (size > 0)
-				{
-					bitVector[i / 8] |= 0b1 << i % 8;
-					break;
-				}
+				bitVector[i / 8] |= 0b1 << i % 8;
+				break;
 			}
+
 		}
 	}
-	else 
+	else
 	{
 		for (short i = 0; i < size; i++) {
 			bitVector[i] = buffer[i];
@@ -149,7 +148,7 @@ void init_fs()
 		if (nodes[i].num_blocks <= NUM_BLOCKS_IN_INODE) {
 			for (unsigned int j = 0; j < nodes[i].num_blocks; j++) {
 				for (int k = 0; k < 8; k++) {
-					nodes[i].directBlock[j] |= buffer[(2+ MAX_NAME_LENGTH + 4) + j + (8 - k)] << (k * 8); //Reads 8 bytes from disk and converts it into a long.
+					nodes[i].directBlock[j] |= buffer[(2 + MAX_NAME_LENGTH + 4) + j + (8 - k)] << (k * 8); //Reads 8 bytes from disk and converts it into a long.
 				}
 			}
 		}
@@ -313,7 +312,7 @@ unsigned long get_next_free_Inode()
 	}
 }
 
-void write_fs_to_disk() 
+void write_fs_to_disk()
 {
 	return;
 }
