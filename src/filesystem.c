@@ -2,18 +2,20 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include "softwaredisk.c"
+#include "softwaredisk.h"
 #include "filesystem.h"
 
+#pragma warning(disable:4996)
 #define NUM_BLOCKS_IN_INODE 12
 #define TOTAL_NUM_INODES 40
+#define MAX_NAME_LENGTH 255
 
 // ------------------------STRUCTS-------------------------
 //Inode
 struct INode
 {
 	File file_ptr;
-	char* name;
+	char name[MAX_NAME_LENGTH];
 	unsigned long directBlock[NUM_BLOCKS_IN_INODE];
 	unsigned long indirectBlock; //The index of the block number that stores the indexes of the blocks where the rest of the data is kept.
 	unsigned int num_blocks; //Total number of blocks used for the file.
@@ -37,8 +39,7 @@ typedef struct FileInternals *File;
 
 //---------------------Globals-------------------------
 FSError fserror;
-FileMode mode;
-unsigned char* bitVector; //A bitvector is used to efficiently mark blocks as used oravailable
+unsigned char* bitVector; //A bitvector is used to efficiently mark blocks as used or available
 short unsigned int unusedBits; //Number of unused bits at the end of bitVector
 int initialized = 0;
 struct INode nodes[TOTAL_NUM_INODES]; //Array of statically allocated Inodes
@@ -58,7 +59,7 @@ void init_file(File f)
 
 void init_inode(inode i)
 {
-	i->name = "";
+	strcpy(i->name, "");
 	i->num_blocks = 0;
 	i->file_ptr = NULL;
 	i->indirectBlock = 0;
@@ -70,6 +71,7 @@ void init_inode(inode i)
 //Startup code.
 void init_fs()
 {
+	//This function assumes that either the disk is blank, or there is valid data on it.  Errors occur if the disk is full of random junk.
 	initialized = 1;
 
 	//Initializes bitvector
@@ -81,7 +83,7 @@ void init_fs()
 	//If software_disk_size isn't evenly divisible by 8, then this marks how many bits aren't used.
 	unusedBits = software_disk_size() % 8;
 
-	unsigned char* buffer = calloc(SOFTWARE_DISK_BLOCK_SIZE, sizeof(unsigned char)); //Creates zero initialized bitvector
+	unsigned char* buffer = malloc(SOFTWARE_DISK_BLOCK_SIZE);
 	unsigned short size;
 	if (read_sd_block(buffer, 0) == 0)
 	{
@@ -134,7 +136,7 @@ void init_fs()
 			}
 		}
 	}
-	//Despite the multiple nested loops, this should run much faster than the above because the maximum number of each loop variable is small.
+	//Despite the multiple nested loops, this should run very fast because the maximum number of each loop variable is small.
 	for (int i = 0; i < NUM_BLOCKS_IN_INODE; i++) { //Initialize inodes from data on disk
 		read_sd_block(buffer, i + 2);
 		size = buffer[0] << 8;
@@ -142,25 +144,26 @@ void init_fs()
 		if (size == 0) {
 			break;
 		}
-		strcpy(nodes[i].name, buffer);
-		nodes[i].num_blocks = buffer[258] << 24 | buffer[259] << 16 | buffer[260] << 8 | buffer[261];
+		strcpy(nodes[i].name, buffer + 2);
+		nodes[i].num_blocks = buffer[MAX_NAME_LENGTH + 2] << 24 | buffer[MAX_NAME_LENGTH + 3] << 16 | buffer[MAX_NAME_LENGTH + 4] << 8 | buffer[MAX_NAME_LENGTH + 5];
 		if (nodes[i].num_blocks <= NUM_BLOCKS_IN_INODE) {
 			for (unsigned int j = 0; j < nodes[i].num_blocks; j++) {
 				for (int k = 0; k < 8; k++) {
-					nodes[i].directBlock[j] |= buffer[262 + j + (8 - k)] << (k * 8); //Reads 8 bytes from disk and converts it into a long.
+					nodes[i].directBlock[j] |= buffer[(2+ MAX_NAME_LENGTH + 4) + j + (8 - k)] << (k * 8); //Reads 8 bytes from disk and converts it into a long.
 				}
 			}
 		}
 		else {
 			for (unsigned int j = 0; j < NUM_BLOCKS_IN_INODE; j++) {
 				for (int k = 0; k < 8; k++) {
-					nodes[i].directBlock[j] |= buffer[262 + j + (8 - k)] << (k * 8);
+					nodes[i].directBlock[j] |= buffer[(2 + MAX_NAME_LENGTH + 4) + j + (8 - k)] << (k * 8);//2 == sizeof(short), 4 == sizeof(int) 8 == sizeof(long)
 				}
 			}
 
 		}
+		nodes[i].indirectBlock = 0; //Make sure all the bits are 0 before doing bitwise stuff to it
 		for (int j = 0; j < 8; j++) {
-			nodes[i].indirectBlock |= buffer[(2 + 255 + 4) + (8 - j)] << (j * 8);
+			nodes[i].indirectBlock |= buffer[(2 + MAX_NAME_LENGTH + 4 + 8 * NUM_BLOCKS_IN_INODE) + (8 - j)] << (j * 8);//2 == sizeof(short), 4 == sizeof(int) 8 == sizeof(long)
 		}
 		nodes[i].file_ptr = malloc(sizeof(File));
 		init_file(nodes[i].file_ptr);
@@ -170,7 +173,15 @@ void init_fs()
 
 	}
 	free(buffer);
-
+	/*
+	The structure of the blocks is as follows:
+	2 bytes for the short containing the number of used bytes in the block
+	255 bytes for the name of the file
+	4 bytes for an integer containing the number of blocks the inode has allocated to it
+	8*NUM_BLOCKS_IN_INODE bytes for the array of direct blocks even if not all the blocks are used
+	8 bytes for the indirect block containing the array of indexes of the indirect blocks
+	For the default NUM_BLOCK_IN_INODE value of 12, there should be 147 bytes remaining of the 512 bytes block
+	*/
 	return;
 }
 
@@ -222,6 +233,10 @@ unsigned short get_block_used_bytes(long block_num)
 //Loads an array of longs with the contents of the indirect block
 void get_indirect_block_nums(struct INode* node, unsigned long * buf)
 {
+	if (node->directBlock == 0) {
+		puts("Error: Indicated block has no indirect blocks.");
+		return;
+	}
 	unsigned long* indirect_block = calloc(SOFTWARE_DISK_BLOCK_SIZE, sizeof(unsigned char));
 	if (read_sd_block(indirect_block, node->indirectBlock) == 0)
 	{
@@ -298,6 +313,11 @@ unsigned long get_next_free_Inode()
 	}
 }
 
+void write_fs_to_disk() 
+{
+	return;
+}
+
 // ----------------------------------------------------------
 
 
@@ -321,12 +341,12 @@ File create_file(char *name, FileMode mode)
 	}
 
 	int i = 0;
-	for (; i < 256; i++) {
+	for (; i < 255; i++) {
 		if (name[i] == '\0') {
 			break;
 		}
 	}
-	if (i > 255) {
+	if (i > 254) {
 		puts("File name too long or lacks null terminator.");
 		return NULL;
 	}
