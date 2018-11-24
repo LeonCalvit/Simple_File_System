@@ -230,8 +230,8 @@ unsigned long get_next_free_Inode()
 	init_inode(node);
 	for(int i = 3 ; i <= 2+TOTAL_NUM_INODES; i++)
 	{
-		//read_sd_block(sizeof(node),i);
-		//This causes errors, because the arguments don't match. You're supposed to pass in a buffer to store the block to.
+		unsigned char* buffer = calloc(SOFTWARE_DISK_BLOCK_SIZE, sizeof(unsigned char));
+		read_sd_block(buffer,i);
 	}
 }
 
