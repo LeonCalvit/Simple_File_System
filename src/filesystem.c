@@ -198,8 +198,30 @@ unsigned long get_block_num_from_file(File file, unsigned int num)
 	return temp;
 }
 
-//What is this supposed to do? It isn't getting the next free INode.  Besides, the next free one will always be nodes[num_inode]
+//Takes input data of size size, and pads the data to the desired size in the inputted buffer.
+//Also places two bytes in the front to indicate how many used bytes there are.
+//Size should not be more than two smaller than desired_size
 
+//Still in testing. Don't rely on yet
+
+void pad_block(char * input_data, short size, char* buffer, short desired_size)
+{
+	if (desired_size - 2 < size)
+	{
+		puts("Hey, don't do that.");
+		return;
+	}
+	buffer[0] = (desired_size >> 8) & 0xFF;
+	buffer[1] = desired_size & 0xFF;
+	for (int i = 2; i < size + 2; i++)
+	{
+		buffer[i] = input_data[i - 2];
+	}
+
+	return;
+}
+
+// Retrieves the next free Inode block number from disk
 unsigned long get_next_free_Inode()
 {
 	return 0;
@@ -379,17 +401,19 @@ int delete_file(char *name)
 	if (node->num_blocks < NUM_BLOCKS_IN_INODE) { //Block numbers aren't being stored in the indirect nodes, so deleting the INode is simpler;
 		//Goes through blocks of the INode and writes zeroes to them
 
-		for (unsigned long j = 0; j < node->num_blocks; j++) {
-			write_sd_block(empty_buffer, nodes[i].directBlock[j]);
-			flip_block_availability(nodes[i].directBlock[j]);
+		for (unsigned long j = 0; j < node->num_blocks; j++)
+		{
+			write_sd_block(empty_buffer, nodes[i]->directBlock[j]);
+			flip_block_availability(nodes[i]->directBlock[j]);
 		}
 	}
 	else
 	{ //More complex case
 
-		for (unsigned long j = 0; j < NUM_BLOCKS_IN_INODE; j++) { //Free all the blocks in the direct node
-			write_sd_block(empty_buffer, nodes[i].directBlock[j]);
-			flip_block_availability(nodes[i].directBlock[j]);
+		for (unsigned long j = 0; j < NUM_BLOCKS_IN_INODE; j++)
+		{ //Free all the blocks in the direct node
+			write_sd_block(empty_buffer, nodes[i]->directBlock[j]);
+			flip_block_availability(nodes[i]->directBlock[j]);
 		}
 		unsigned long* indirect_blocks = malloc(sizeof(unsigned long) * (node->num_blocks - NUM_BLOCKS_IN_INODE));
 		get_indirect_block_nums(node, indirect_blocks);
@@ -424,28 +448,8 @@ int file_exists(char *name)
     return 0;
 }
 
-//Takes input data of size size, and pads the data to the desired size in the inputted buffer.
-//Also places two bytes in the front to indicate how many used bytes there are.
-//Size should not be more than two smaller than desired_size
 
-//Still in testing. Don't rely on yet
-
-void pad_block(char * input_data, short size, char* buffer, short desired_size)
-{
-	if (desired_size - 2 < size) {
-		puts("Hey, don't do that.");
-		return;
-	}
-	buffer[0] = (desired_size >> 8) & 0xFF;
-	buffer[1] = desired_size & 0xFF;
-	for (int i = 2; i < size + 2; i++) {
-		buffer[i] = input_data[i - 2];
-	}
-
-	return;
-}
-
-// describe current filesystem error code by printing a descriptive message to standard error.
+// describes the current filesystem error code by printing a descriptive message to standard error.
 void fs_print_error(void)
 {
     switch (fserror)
