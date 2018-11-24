@@ -169,7 +169,8 @@ void get_indirect_block_nums(struct INode* node,unsigned long * buf)
 		return;
 	}
 
-	for (unsigned int i = 0; i < (node->num_blocks - NUM_BLOCKS_IN_INODE); i++) { //num_blocks - NUM_BLOCKS_IN_INODE is the number of blocks in the indirect node
+	for (unsigned int i = 0; i < (node->num_blocks - NUM_BLOCKS_IN_INODE); i++)
+	{ //num_blocks - NUM_BLOCKS_IN_INODE is the number of blocks in the indirect node
 		buf[i] = indirect_block[i];
 	}
 
@@ -383,7 +384,8 @@ int delete_file(char *name)
 			flip_block_availability(nodes[i].directBlock[j]);
 		}
 	}
-	else { //More complex case
+	else
+	{ //More complex case
 
 		for (unsigned long j = 0; j < NUM_BLOCKS_IN_INODE; j++) { //Free all the blocks in the direct node
 			write_sd_block(empty_buffer, nodes[i].directBlock[j]);
