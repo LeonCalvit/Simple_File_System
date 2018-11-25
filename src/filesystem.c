@@ -5,7 +5,7 @@
 #include "softwaredisk.h"
 #include "filesystem.h"
 
-#pragma warning(disable:4996)
+#pragma warning(disable : 4996)
 #define NUM_BLOCKS_IN_INODE 12
 #define TOTAL_NUM_INODES 40
 #define MAX_NAME_LENGTH 255
@@ -19,32 +19,31 @@ struct INode
 	char name[MAX_NAME_LENGTH];
 	unsigned long directBlock[NUM_BLOCKS_IN_INODE];
 	unsigned long indirectBlock; //The index of the block number that stores the indexes of the blocks where the rest of the data is kept.
-	unsigned int num_blocks; //Total number of blocks used for the file.
-	unsigned int num_open; //The number of open files accessing this inode.
+	unsigned int num_blocks;	 //Total number of blocks used for the file.
+	unsigned int num_open;		 //The number of open files accessing this inode.
 } INode;
 
 typedef struct INode *inode;
 // main private file type
 struct FileInternals
 {
-	struct INode* node_ptr;
+	struct INode *node_ptr;
 	FileMode mode;
 	unsigned long BytePosition; // The byte position of the pointer used in seek_file
-	char* name;
+	char *name;
 	FILE *fp;
 } FileInternals;
 
 // file type used by user code
 typedef struct FileInternals *File;
 
-
 //---------------------Globals-------------------------
 FSError fserror;
-unsigned char* bitVector; //A bitvector is used to efficiently mark blocks as used or available
+unsigned char *bitVector;	  //A bitvector is used to efficiently mark blocks as used or available
 short unsigned int unusedBits; //Number of unused bits at the end of bitVector
 int initialized = 0;
 struct INode nodes[TOTAL_NUM_INODES]; //Array of statically allocated Inodes
-int num_nodes = 0;					   //Number of Inodes currently being used.
+int num_nodes = 0;					  //Number of Inodes currently being used.
 
 //----------------------Helper Functions-------------------
 
@@ -58,6 +57,7 @@ void init_file(File f)
 	f->fp = NULL;
 }
 
+// Init a new Inode
 void init_inode(inode i)
 {
 	strcpy(i->name, "");
@@ -65,9 +65,11 @@ void init_inode(inode i)
 	i->file_ptr = NULL;
 	i->indirectBlock = 0;
 	i->num_open = 0;
-	for (int l = 0; l < NUM_BLOCKS_IN_INODE; l++) { i->directBlock[l] = 0; }
+	for (int l = 0; l < NUM_BLOCKS_IN_INODE; l++)
+	{
+		i->directBlock[l] = 0;
+	}
 }
-
 
 //Startup code.
 void init_fs()
@@ -84,7 +86,7 @@ void init_fs()
 	//If software_disk_size isn't evenly divisible by 8, then this marks how many bits aren't used.
 	unusedBits = software_disk_size() % 8;
 
-	unsigned char* buffer = malloc(SOFTWARE_DISK_BLOCK_SIZE);
+	unsigned char *buffer = malloc(SOFTWARE_DISK_BLOCK_SIZE);
 	unsigned short size;
 	if (read_sd_block(buffer, 0) == 0)
 	{
@@ -118,59 +120,67 @@ void init_fs()
 				bitVector[i / 8] |= 0b1 << i % 8;
 				break;
 			}
-
 		}
 	}
 	else
 	{
-		for (short i = 0; i < size; i++) {
+		for (short i = 0; i < size; i++)
+		{
 			bitVector[i] = buffer[i];
 		}
 		bitVector[0] |= 0b11 << 7;
 		read_sd_block(buffer, 1);
 		size = buffer[0] << 8;
 		size |= buffer[1];
-		if (size > 0) {
-			for (short i = SOFTWARE_DISK_BLOCK_SIZE; i < size + SOFTWARE_DISK_BLOCK_SIZE; i++) {
+		if (size > 0)
+		{
+			for (short i = SOFTWARE_DISK_BLOCK_SIZE; i < size + SOFTWARE_DISK_BLOCK_SIZE; i++)
+			{
 				bitVector[i] = buffer[i];
 			}
 		}
 	}
 	//Despite the multiple nested loops, this should run very fast because the maximum number of each loop variable is small.
-	for (int i = 0; i < NUM_BLOCKS_IN_INODE; i++) { //Initialize inodes from data on disk
+	for (int i = 0; i < NUM_BLOCKS_IN_INODE; i++)
+	{ //Initialize inodes from data on disk
 		read_sd_block(buffer, i + 2);
 		size = buffer[0] << 8;
 		size |= buffer[1];
-		if (size == 0) {
+		if (size == 0)
+		{
 			break;
 		}
 		strcpy(nodes[i].name, buffer + 2);
 		nodes[i].num_blocks = buffer[MAX_NAME_LENGTH + 2] << 24 | buffer[MAX_NAME_LENGTH + 3] << 16 | buffer[MAX_NAME_LENGTH + 4] << 8 | buffer[MAX_NAME_LENGTH + 5];
-		if (nodes[i].num_blocks <= NUM_BLOCKS_IN_INODE) {
-			for (unsigned int j = 0; j < nodes[i].num_blocks; j++) {
-				for (int k = 0; k < 8; k++) {
+		if (nodes[i].num_blocks <= NUM_BLOCKS_IN_INODE)
+		{
+			for (unsigned int j = 0; j < nodes[i].num_blocks; j++)
+			{
+				for (int k = 0; k < 8; k++)
+				{
 					nodes[i].directBlock[j] |= buffer[(2 + MAX_NAME_LENGTH + 4) + j + (8 - k)] << (k * 8); //Reads 8 bytes from disk and converts it into a long.
 				}
 			}
 		}
-		else {
-			for (unsigned int j = 0; j < NUM_BLOCKS_IN_INODE; j++) {
-				for (int k = 0; k < 8; k++) {
-					nodes[i].directBlock[j] |= buffer[(2 + MAX_NAME_LENGTH + 4) + j + (8 - k)] << (k * 8);//2 == sizeof(short), 4 == sizeof(int) 8 == sizeof(long)
+		else
+		{
+			for (unsigned int j = 0; j < NUM_BLOCKS_IN_INODE; j++)
+			{
+				for (int k = 0; k < 8; k++)
+				{
+					nodes[i].directBlock[j] |= buffer[(2 + MAX_NAME_LENGTH + 4) + j + (8 - k)] << (k * 8); //2 == sizeof(short), 4 == sizeof(int) 8 == sizeof(long)
 				}
 			}
-
 		}
 		nodes[i].indirectBlock = 0; //Make sure all the bits are 0 before doing bitwise stuff to it
-		for (int j = 0; j < 8; j++) {
-			nodes[i].indirectBlock |= buffer[(2 + MAX_NAME_LENGTH + 4 + 8 * NUM_BLOCKS_IN_INODE) + (8 - j)] << (j * 8);//2 == sizeof(short), 4 == sizeof(int) 8 == sizeof(long)
+		for (int j = 0; j < 8; j++)
+		{
+			nodes[i].indirectBlock |= buffer[(2 + MAX_NAME_LENGTH + 4 + 8 * NUM_BLOCKS_IN_INODE) + (8 - j)] << (j * 8); //2 == sizeof(short), 4 == sizeof(int) 8 == sizeof(long)
 		}
 		nodes[i].file_ptr = malloc(sizeof(File));
 		init_file(nodes[i].file_ptr);
 		nodes[i].file_ptr->name = nodes[i].name;
 		nodes[i].file_ptr->node_ptr = &nodes[i];
-
-
 	}
 	free(buffer);
 	/*
@@ -188,26 +198,29 @@ void init_fs()
 void write_inode_to_disk(int inode_index)
 {
 	unsigned short used_bytes = MAX_NAME_LENGTH + sizeof(unsigned int) + sizeof(unsigned long) * NUM_BLOCKS_IN_INODE;
-	unsigned char* buffer = malloc(SOFTWARE_DISK_BLOCK_SIZE);
+	unsigned char *buffer = malloc(SOFTWARE_DISK_BLOCK_SIZE);
 	buffer[0] = (used_bytes >> 8) & 0xFF;
 	buffer[1] = used_bytes & 0xFF;
 	strcpy(buffer + sizeof(unsigned short), nodes[inode_index].name);
 
-	
 	//Write the number of blocks used to disk.
-	for (int j = 0; j < sizeof(unsigned int); j++) {
+	for (int j = 0; j < sizeof(unsigned int); j++)
+	{
 		buffer[(sizeof(unsigned short) + MAX_NAME_LENGTH) + j] = (nodes[inode_index].num_blocks >> ((sizeof(unsigned int) - j) * 8)) & 0xFF;
 	}
-	
+
 	//Write direct blocks to buffer
-	for (int i = 0; i < NUM_BLOCKS_IN_INODE; i++) {
-		for (int j = 0; j < sizeof(unsigned long); j++) {
+	for (int i = 0; i < NUM_BLOCKS_IN_INODE; i++)
+	{
+		for (int j = 0; j < sizeof(unsigned long); j++)
+		{
 			buffer[sizeof(unsigned short) + MAX_NAME_LENGTH + sizeof(unsigned int) + i + j] = (nodes[inode_index].directBlock[i] >> ((sizeof(unsigned long) - j) * 8)) & 0xFF;
 		}
 	}
 
 	//Write index of indirect block storage
-	for (int i = 0; i < sizeof(unsigned long); i++) {
+	for (int i = 0; i < sizeof(unsigned long); i++)
+	{
 		buffer[(sizeof(unsigned short) + MAX_NAME_LENGTH) + sizeof(unsigned int) + sizeof(unsigned long) * NUM_BLOCKS_IN_INODE + i] = (nodes[inode_index].indirectBlock >> ((sizeof(unsigned long) - i) * 8)) & 0xFF;
 	}
 
@@ -218,31 +231,39 @@ void write_inode_to_disk(int inode_index)
 
 void write_fs_to_disk()
 {
-	for (unsigned int i = 0; i < NUM_BLOCKS_IN_INODE; i++) 
-	{ 
+	for (unsigned int i = 0; i < NUM_BLOCKS_IN_INODE; i++)
+	{
 		write_inode_to_disk(i);
 	}
 
-	unsigned char* buffer = calloc(SOFTWARE_DISK_BLOCK_SIZE, 1);
-	if (software_disk_size() > SOFTWARE_DISK_BLOCK_SIZE - 2) {
+	unsigned char *buffer = calloc(SOFTWARE_DISK_BLOCK_SIZE, 1);
+	if (software_disk_size() > SOFTWARE_DISK_BLOCK_SIZE - 2)
+	{
 		//Write first part of bitVector to buffer
-		buffer[0] = ((SOFTWARE_DISK_BLOCK_SIZE-2) >> 8) & 0xFF;
-		buffer[1] = (SOFTWARE_DISK_BLOCK_SIZE-2) & 0xFF;
-		for (unsigned int i = 2; i < SOFTWARE_DISK_BLOCK_SIZE; i++) {
+		buffer[0] = ((SOFTWARE_DISK_BLOCK_SIZE - 2) >> 8) & 0xFF;
+		buffer[1] = (SOFTWARE_DISK_BLOCK_SIZE - 2) & 0xFF;
+		for (unsigned int i = 2; i < SOFTWARE_DISK_BLOCK_SIZE; i++)
+		{
 			buffer[i] = bitVector[i];
 		}
 		write_sd_block(buffer, 0);
-		for (unsigned int i = 0; i < SOFTWARE_DISK_BLOCK_SIZE; i++) { buffer[i] = 0; } //Zero the buffer
+		for (unsigned int i = 0; i < SOFTWARE_DISK_BLOCK_SIZE; i++)
+		{
+			buffer[i] = 0;
+		} //Zero the buffer
 		//Write second part of bitVector to buffer
-		for (unsigned int i = 2; i < (software_disk_size()/8) - (SOFTWARE_DISK_BLOCK_SIZE - 2) + 1; i++) {
+		for (unsigned int i = 2; i < (software_disk_size() / 8) - (SOFTWARE_DISK_BLOCK_SIZE - 2) + 1; i++)
+		{
 			buffer[i] = bitVector[i];
 		}
-		buffer[0] = (((software_disk_size()/8) - (SOFTWARE_DISK_BLOCK_SIZE - 2) + 1) >> 8) & 0xFF;
-		buffer[1] = ((software_disk_size()/8) - (SOFTWARE_DISK_BLOCK_SIZE - 2) + 1) & 0xFF;
+		buffer[0] = (((software_disk_size() / 8) - (SOFTWARE_DISK_BLOCK_SIZE - 2) + 1) >> 8) & 0xFF;
+		buffer[1] = ((software_disk_size() / 8) - (SOFTWARE_DISK_BLOCK_SIZE - 2) + 1) & 0xFF;
 		write_sd_block(buffer, 1);
 	}
-	else {
-		for (unsigned int i = 2; i < software_disk_size() / 8 + 1; i++) {
+	else
+	{
+		for (unsigned int i = 2; i < software_disk_size() / 8 + 1; i++)
+		{
 			buffer[i] = bitVector[i];
 		}
 		buffer[0] = ((software_disk_size() / 8 + 1) >> 8) & 0xFF;
@@ -267,7 +288,6 @@ long first_free_block()
 	return -1;
 }
 
-
 //Takes the index of the block, and flips the availability flag on the bitVector for that block
 void flip_block_availability(unsigned long index)
 {
@@ -284,7 +304,7 @@ void flip_block_availability(unsigned long index)
 //Gets the number of used bytes for the specified block
 unsigned short get_block_used_bytes(long block_num)
 {
-	unsigned char* buffer = calloc(SOFTWARE_DISK_BLOCK_SIZE, sizeof(unsigned char));
+	unsigned char *buffer = calloc(SOFTWARE_DISK_BLOCK_SIZE, sizeof(unsigned char));
 	if (read_sd_block(buffer, block_num) == 0)
 	{
 		//Reads block into buffer, throws an error and returns if there was an error in reading the block
@@ -298,15 +318,15 @@ unsigned short get_block_used_bytes(long block_num)
 	return size;
 }
 
-
 //Loads an array of longs with the contents of the indirect block
-void get_indirect_block_nums(struct INode* node, unsigned long * buf)
+void get_indirect_block_nums(struct INode *node, unsigned long *buf)
 {
-	if (node->indirectBlock == 0) {
+	if (node->indirectBlock == 0)
+	{
 		puts("Error: Indicated block has no indirect blocks.");
 		return;
 	}
-	unsigned long* indirect_block = calloc(SOFTWARE_DISK_BLOCK_SIZE, sizeof(unsigned char));
+	unsigned long *indirect_block = calloc(SOFTWARE_DISK_BLOCK_SIZE, sizeof(unsigned char));
 	if (read_sd_block(indirect_block, node->indirectBlock) == 0)
 	{
 		//Reads block into buffer, throws an error and returns if there was an error in reading the block
@@ -328,7 +348,8 @@ void get_indirect_block_nums(struct INode* node, unsigned long * buf)
 //Gets the block number of the (num)th block of the file
 unsigned long get_block_num_from_file(File file, unsigned int num)
 {
-	if (num > file->node_ptr->num_blocks) {
+	if (num > file->node_ptr->num_blocks)
+	{
 		fserror = FS_IO_ERROR;
 		fs_print_error();
 		return 0;
@@ -338,7 +359,7 @@ unsigned long get_block_num_from_file(File file, unsigned int num)
 		return file->node_ptr->directBlock[num];
 	}
 
-	unsigned long* indirect_blocks = malloc(sizeof(unsigned long) * (file->node_ptr->num_blocks - NUM_BLOCKS_IN_INODE));
+	unsigned long *indirect_blocks = malloc(sizeof(unsigned long) * (file->node_ptr->num_blocks - NUM_BLOCKS_IN_INODE));
 	get_indirect_block_nums(file->node_ptr, indirect_blocks);
 	unsigned long temp = indirect_blocks[num - NUM_BLOCKS_IN_INODE];
 	free(indirect_blocks);
@@ -351,7 +372,7 @@ unsigned long get_block_num_from_file(File file, unsigned int num)
 
 //Still in testing. Don't rely on yet
 
-void pad_block(char * input_data, short size, char* buffer, short desired_size)
+void pad_block(char *input_data, short size, char *buffer, short desired_size)
 {
 	if (desired_size - 2 < size)
 	{
@@ -377,14 +398,12 @@ unsigned long get_next_free_Inode()
 	init_inode(node);
 	for (int i = 3; i <= 2 + TOTAL_NUM_INODES; i++)
 	{
-		unsigned char* buffer = calloc(SOFTWARE_DISK_BLOCK_SIZE, sizeof(unsigned char));
+		unsigned char *buffer = calloc(SOFTWARE_DISK_BLOCK_SIZE, sizeof(unsigned char));
 		read_sd_block(buffer, i);
 	}
 }
 
 // ----------------------------------------------------------
-
-
 
 //------------------Needed Functions--------------------
 File open_file(char *name, FileMode mode)
@@ -405,22 +424,27 @@ File create_file(char *name, FileMode mode)
 	}
 
 	int i = 0;
-	for (; i < 255; i++) {
-		if (name[i] == '\0') {
+	for (; i < 255; i++)
+	{
+		if (name[i] == '\0')
+		{
 			break;
 		}
 	}
-	if (i > 254) {
+	if (i > 254)
+	{
 		puts("File name too long or lacks null terminator.");
 		return NULL;
 	}
 
-	if (first_free_block() == -1 || num_nodes == TOTAL_NUM_INODES) {
+	if (first_free_block() == -1 || num_nodes == TOTAL_NUM_INODES)
+	{
 		fserror = FS_OUT_OF_SPACE;
 		fs_print_error();
 		return NULL;
 	}
-	if (file_exists(name)) {
+	if (file_exists(name))
+	{
 		fserror = FS_FILE_ALREADY_EXISTS;
 		fs_print_error();
 		return NULL;
@@ -443,13 +467,20 @@ File create_file(char *name, FileMode mode)
 	f->node_ptr->num_blocks = 1;
 	//Indirect block is unassigned until needed.
 
-
 	return f;
 }
 
 // close 'file'.  Always sets 'fserror' global.
 void close_file(File file)
 {
+	if(file->mode == Closed)
+	{
+		fserror = FS_FILE_NOT_OPEN;
+		fs_print_error();
+	}
+
+	// TODO: write any needed changes to file
+	// TODO: set file state to closed
 	return;
 }
 
@@ -501,6 +532,11 @@ int seek_file(File file, unsigned long bytepos)
 	}
 	else
 	{
+		if(bytepos<MAX_FILE_SIZE)
+		{
+			fserror = FS_EXCEEDS_MAX_FILE_SIZE;
+			fs_print_error();
+		}
 		//TODO: More complex case of if the bytepos is bigger than the file
 	}
 
@@ -521,32 +557,37 @@ unsigned long file_length(File file)
 int delete_file(char *name)
 {
 	// Delete file successfully
-	if (!file_exists(name)) {
+	if (!file_exists(name))
+	{
 		fserror = FS_FILE_NOT_FOUND;
 		fs_print_error();
 		return 0;
 	}
 
-	struct INode* node = NULL;
+	struct INode *node = NULL;
 	int i = 0;
 	//Find the correct number of the specified INode in the array of inodes.
 	//Always finds a value because code above checks that said file exists first.
 	//Need to use the index of the INode later for swapping.
-	for (; i < num_nodes; i++) {
-		if (strcmp(name, nodes[i].name) == 0) {
+	for (; i < num_nodes; i++)
+	{
+		if (strcmp(name, nodes[i].name) == 0)
+		{
 			node = &nodes[i];
 			break;
 		}
 	}
 
-	if (node->file_ptr->mode == Closed) {
+	if (node->file_ptr->mode == Closed)
+	{
 		fserror = FS_FILE_OPEN;
 		fs_print_error();
 		return 0;
 	}
 
-	unsigned char* empty_buffer = calloc(SOFTWARE_DISK_BLOCK_SIZE, sizeof(unsigned char));
-	if (node->num_blocks < NUM_BLOCKS_IN_INODE) { //Block numbers aren't being stored in the indirect nodes, so deleting the INode is simpler;
+	unsigned char *empty_buffer = calloc(SOFTWARE_DISK_BLOCK_SIZE, sizeof(unsigned char));
+	if (node->num_blocks < NUM_BLOCKS_IN_INODE)
+	{ //Block numbers aren't being stored in the indirect nodes, so deleting the INode is simpler;
 		//Goes through blocks of the INode and writes zeroes to them
 
 		for (unsigned long j = 0; j < node->num_blocks; j++)
@@ -563,9 +604,10 @@ int delete_file(char *name)
 			write_sd_block(empty_buffer, nodes[i].directBlock[j]);
 			flip_block_availability(nodes[i].directBlock[j]);
 		}
-		unsigned long* indirect_blocks = malloc(sizeof(unsigned long) * (node->num_blocks - NUM_BLOCKS_IN_INODE));
+		unsigned long *indirect_blocks = malloc(sizeof(unsigned long) * (node->num_blocks - NUM_BLOCKS_IN_INODE));
 		get_indirect_block_nums(node, indirect_blocks);
-		for (unsigned long j = 0; j < nodes[i].num_blocks - NUM_BLOCKS_IN_INODE; j++) {//Free all the blocks in the indirect node
+		for (unsigned long j = 0; j < nodes[i].num_blocks - NUM_BLOCKS_IN_INODE; j++)
+		{ //Free all the blocks in the indirect node
 			write_sd_block(empty_buffer, indirect_blocks[j]);
 			flip_block_availability(indirect_blocks[j]);
 		}
@@ -588,15 +630,16 @@ int file_exists(char *name)
 		init_fs();
 	}
 
-	for (int i = 0; i < num_nodes; i++) {
-		if (strcmp(name, nodes[i].name) == 0) {
+	for (int i = 0; i < num_nodes; i++)
+	{
+		if (strcmp(name, nodes[i].name) == 0)
+		{
 			return 1;
 		}
 	}
 
 	return 0;
 }
-
 
 // describes the current filesystem error code by printing a descriptive message to standard error.
 void fs_print_error(void)
