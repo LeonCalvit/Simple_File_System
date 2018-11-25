@@ -9,7 +9,8 @@
 #define NUM_BLOCKS_IN_INODE 12
 #define TOTAL_NUM_INODES 40
 #define MAX_NAME_LENGTH 255
-
+unsigned long maxFileSizeCalc = SOFTWARE_DISK_BLOCK_SIZE * NUM_BLOCKS_IN_INODE * (SOFTWARE_DISK_BLOCK_SIZE/(sizeof(unsigned long)));
+#define MAX_FILE_SIZE maxFileSizeCalc
 // ------------------------STRUCTS-------------------------
 //Inode
 struct INode
