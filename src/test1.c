@@ -4,16 +4,13 @@
 #include "filesystem.h"
 #include "softwaredisk.h"
 
-
 int main(int argc, char *argv[])
 {
     printf("Initializing Disk...\n");
     system("./initfs.out");
-	init_software_disk();
-    File f=create_file("BIlly",READ_ONLY);
-    write_file(f,"Hello",6);
-	delete_file("Billy");
+    init_software_disk();
+    unsigned long maxFileSizeCalc = SOFTWARE_DISK_BLOCK_SIZE * 12 * (SOFTWARE_DISK_BLOCK_SIZE / (sizeof(unsigned long)));
+    printf("%lu", maxFileSizeCalc);
 
     return 0;
-
 }
