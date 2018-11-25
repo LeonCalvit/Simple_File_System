@@ -525,7 +525,7 @@ unsigned long write_file(File file, void *buf, unsigned long numbytes)
 	unsigned char* buf2 = buf; //Void pointers don't allow pointer arithmetic apparently? This is a simple workaround.
 	unsigned long current_pos = file->BytePosition;
 	unsigned long buf_pos = 0;
-	unsigned long cur_block_index = current_pos % SOFTWARE_DISK_BLOCK_SIZE; //The index of the block in the inode.
+	unsigned long cur_block_index = current_pos / (SOFTWARE_DISK_BLOCK_SIZE-2); //The index of the block in the inode.
 	unsigned long cur_block = get_block_num_from_file(file, cur_block_index); //The index of the block on the disk
 	//Write where only the first block is affected
 	if (file->BytePosition % (SOFTWARE_DISK_BLOCK_SIZE - 2) + numbytes < SOFTWARE_DISK_BLOCK_SIZE) 
@@ -546,8 +546,17 @@ unsigned long write_file(File file, void *buf, unsigned long numbytes)
 	else
 	{ //Every other case.
 		
-		//Need to handle case where the first block is written to, but the whole block isn't written over with the new data.
-		
+		read_sd_block(buffer, cur_block);
+		for (int i = current_pos % (SOFTWARE_DISK_BLOCK_SIZE-2); i < SOFTWARE_DISK_BLOCK_SIZE; i++) {
+			buffer[i + 2] = buf2[i];
+		}
+		buffer[0] = ((SOFTWARE_DISK_BLOCK_SIZE - 2) >> 8) & 0xFF;
+		buffer[1] = (SOFTWARE_DISK_BLOCK_SIZE - 2) & 0xFF;
+		write_sd_block(buffer, cur_block);
+		cur_block_index++;
+		cur_block++;
+		buf_pos += SOFTWARE_DISK_BLOCK_SIZE - 2;
+		current_pos += SOFTWARE_DISK_BLOCK_SIZE - 2;
 		while (numbytes - (current_pos - file->BytePosition) > SOFTWARE_DISK_BLOCK_SIZE - 2) { //While the write is writing full blocks
 
 			for (int i = 0; i < SOFTWARE_DISK_BLOCK_SIZE; i++) {
@@ -557,10 +566,11 @@ unsigned long write_file(File file, void *buf, unsigned long numbytes)
 			buffer[1] = (SOFTWARE_DISK_BLOCK_SIZE - 2) & 0xFF;
 			write_sd_block(buffer, get_block_num_from_file(file, cur_block_index));
 			cur_block_index++;
+			cur_block++;
 			buf_pos += SOFTWARE_DISK_BLOCK_SIZE - 2;
 			current_pos += SOFTWARE_DISK_BLOCK_SIZE - 2;
 
-			//TODO: If another block needs to be allocated, handle that
+			//TODO: allocate additional blocks if needed.
 		}
 		for (unsigned int i = 0; i < SOFTWARE_DISK_BLOCK_SIZE; i++) { buffer[i] = 0; } //Zero the buffer
 		unsigned short size = numbytes - (current_pos - file->BytePosition); //Number of bytes for the current block to write
@@ -586,7 +596,7 @@ unsigned long write_file(File file, void *buf, unsigned long numbytes)
 	}
 
 	free(buffer);
-	return 1;
+	return numbytes;
 }
 
 // sets current position in file to 'bytepos', always relative to the
@@ -616,7 +626,7 @@ int seek_file(File file, unsigned long bytepos)
 		{
 			fserror = FS_EXCEEDS_MAX_FILE_SIZE;
 			fs_print_error();
-			return;
+			return 0;
 		}
 		//TODO: More complex case of if the bytepos is bigger than the file
 	}
