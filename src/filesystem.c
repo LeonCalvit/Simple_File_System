@@ -532,17 +532,41 @@ unsigned long write_file(File file, void *buf, unsigned long numbytes)
 
 	unsigned char* buffer = calloc(SOFTWARE_DISK_BLOCK_SIZE, 1);
 	unsigned char* buf2 = buf; //Void pointers don't allow pointer arithmetic apparently? This is a simple workaround.
-
+	unsigned long current_pos = file->BytePosition;
+	unsigned long buf_pos = 0;
+	unsigned long cur_block_index = current_pos / (SOFTWARE_DISK_BLOCK_SIZE-2); //The index of the block in the inode.
+	unsigned long cur_block = get_block_num_from_file(file, cur_block_index); //The index of the block on the disk
 	//Write where only the first block is affected
-	if (file->BytePosition % (SOFTWARE_DISK_BLOCK_SIZE - 2) + numbytes < SOFTWARE_DISK_BLOCK_SIZE) {
+	if (file->BytePosition % (SOFTWARE_DISK_BLOCK_SIZE - 2) + numbytes < SOFTWARE_DISK_BLOCK_SIZE)
+	{
+		unsigned short size = numbytes - (current_pos - file->BytePosition); //Number of bytes for the current block to write
+		read_sd_block(buffer, cur_block);
+		for (int i = 0; i < size; i++) {
+			buffer[i + 2] = buf2[i];
+		}
+		size = (size - (file->BytePosition % (SOFTWARE_DISK_BLOCK_SIZE-2)) + numbytes) > size ? (size - (file->BytePosition % (SOFTWARE_DISK_BLOCK_SIZE - 2)) + numbytes) : size;
+		//set size to the larger of size or the end position of numbytes + byteposition
+		//This order of operations is correct.  It is NOT supposed to be size - (byteposition + numbytes)
+		buffer[0] = (size >> 8) & 0xFF;
+		buffer[1] = size & 0xFF;
 
+		write_sd_block(buffer, cur_block);
 	}
-	else { //Every other case.
-		unsigned long current_pos = file->BytePosition, buf_pos = 0;
-		//Need to handle case where the first block is written to, but the whole block isn't written over with the new data.
-		unsigned long cur_block_index = current_pos % SOFTWARE_DISK_BLOCK_SIZE; //The index of the block in the inode.
-		while (numbytes - (current_pos - file->BytePosition) > SOFTWARE_DISK_BLOCK_SIZE - 2)
-		{ //While the write is writing full blocks
+	else
+	{ //Every other case.
+
+		read_sd_block(buffer, cur_block);
+		for (int i = current_pos % (SOFTWARE_DISK_BLOCK_SIZE-2); i < SOFTWARE_DISK_BLOCK_SIZE; i++) {
+			buffer[i + 2] = buf2[i];
+		}
+		buffer[0] = ((SOFTWARE_DISK_BLOCK_SIZE - 2) >> 8) & 0xFF;
+		buffer[1] = (SOFTWARE_DISK_BLOCK_SIZE - 2) & 0xFF;
+		write_sd_block(buffer, cur_block);
+		cur_block_index++;
+		cur_block++;
+		buf_pos += SOFTWARE_DISK_BLOCK_SIZE - 2;
+		current_pos += SOFTWARE_DISK_BLOCK_SIZE - 2;
+		while (numbytes - (current_pos - file->BytePosition) > SOFTWARE_DISK_BLOCK_SIZE - 2) { //While the write is writing full blocks
 
 			for (int i = 0; i < SOFTWARE_DISK_BLOCK_SIZE; i++) {
 				buffer[i + 2] = buf2[i + buf_pos];
@@ -551,14 +575,15 @@ unsigned long write_file(File file, void *buf, unsigned long numbytes)
 			buffer[1] = (SOFTWARE_DISK_BLOCK_SIZE - 2) & 0xFF;
 			write_sd_block(buffer, get_block_num_from_file(file, cur_block_index));
 			cur_block_index++;
+			cur_block++;
 			buf_pos += SOFTWARE_DISK_BLOCK_SIZE - 2;
 			current_pos += SOFTWARE_DISK_BLOCK_SIZE - 2;
 
-			//TODO: If another block needs to be allocated, handle that
+			//TODO: allocate additional blocks if needed.
 		}
 		for (unsigned int i = 0; i < SOFTWARE_DISK_BLOCK_SIZE; i++) { buffer[i] = 0; } //Zero the buffer
 		unsigned short size = numbytes - (current_pos - file->BytePosition); //Number of bytes for the current block to write
-		unsigned long cur_block = get_block_num_from_file(file, cur_block_index); //The index of the block on the disk
+
 		if (size > get_block_used_bytes(cur_block)) { //If the remaining bytes to write will increase the size of the file
 			buffer[0] = (size >> 8) & 0xFF;
 			buffer[1] = size & 0xFF;
@@ -580,7 +605,7 @@ unsigned long write_file(File file, void *buf, unsigned long numbytes)
 	}
 
 	free(buffer);
-	return 1;
+	return numbytes;
 }
 
 // sets current position in file to 'bytepos', always relative to the
@@ -606,10 +631,11 @@ int seek_file(File file, unsigned long bytepos)
 	}
 	else
 	{
-		if(bytepos<MAX_FILE_SIZE)
+		if(bytepos > MAX_FILE_SIZE)
 		{
 			fserror = FS_EXCEEDS_MAX_FILE_SIZE;
 			fs_print_error();
+			return 0;
 		}
 		//TODO: More complex case of if the bytepos is bigger than the file
 	}
