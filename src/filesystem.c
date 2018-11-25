@@ -9,7 +9,7 @@
 #define NUM_BLOCKS_IN_INODE 12
 #define TOTAL_NUM_INODES 40
 #define MAX_NAME_LENGTH 255
-unsigned long maxFileSizeCalc = SOFTWARE_DISK_BLOCK_SIZE * NUM_BLOCKS_IN_INODE * (SOFTWARE_DISK_BLOCK_SIZE/(sizeof(unsigned long)));
+unsigned long maxFileSizeCalc = (SOFTWARE_DISK_BLOCK_SIZE-2) * NUM_BLOCKS_IN_INODE + ((SOFTWARE_DISK_BLOCK_SIZE-2)/(sizeof(unsigned long)));
 #define MAX_FILE_SIZE maxFileSizeCalc
 // ------------------------STRUCTS-------------------------
 //Inode
@@ -485,7 +485,7 @@ unsigned long write_file(File file, void *buf, unsigned long numbytes)
 		fs_print_error();
 		return 0;
 	}
-	if (file->BytePosition + numbytes > (SOFTWARE_DISK_BLOCK_SIZE - 2) * (NUM_BLOCKS_IN_INODE + SOFTWARE_DISK_BLOCK_SIZE/sizeof(unsigned long))) {
+	if (file->BytePosition + numbytes > (SOFTWARE_DISK_BLOCK_SIZE - 2) * (NUM_BLOCKS_IN_INODE + (SOFTWARE_DISK_BLOCK_SIZE-2)/sizeof(unsigned long))) {
 		fserror = FS_EXCEEDS_MAX_FILE_SIZE;
 		fs_print_error();
 		return 0;
