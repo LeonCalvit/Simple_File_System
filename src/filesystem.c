@@ -217,10 +217,39 @@ void write_inode_to_disk(int inode_index)
 
 void write_fs_to_disk()
 {
-	for (int i = 0; i < NUM_BLOCKS_IN_INODE; i++) 
+	for (unsigned int i = 0; i < NUM_BLOCKS_IN_INODE; i++) 
 	{ 
 		write_inode_to_disk(i);
 	}
+
+	unsigned char* buffer = calloc(SOFTWARE_DISK_BLOCK_SIZE, 1);
+	if (software_disk_size() > SOFTWARE_DISK_BLOCK_SIZE - 2) {
+		//Write first part of bitVector to buffer
+		buffer[0] = ((SOFTWARE_DISK_BLOCK_SIZE-2) >> 8) & 0xFF;
+		buffer[1] = (SOFTWARE_DISK_BLOCK_SIZE-2) & 0xFF;
+		for (unsigned int i = 2; i < SOFTWARE_DISK_BLOCK_SIZE; i++) {
+			buffer[i] = bitVector[i];
+		}
+		write_sd_block(buffer, 0);
+		for (unsigned int i = 0; i < SOFTWARE_DISK_BLOCK_SIZE; i++) { buffer[i] = 0; } //Zero the buffer
+		//Write second part of bitVector to buffer
+		for (unsigned int i = 2; i < (software_disk_size()/8) - (SOFTWARE_DISK_BLOCK_SIZE - 2) + 1; i++) {
+			buffer[i] = bitVector[i];
+		}
+		buffer[0] = (((software_disk_size()/8) - (SOFTWARE_DISK_BLOCK_SIZE - 2) + 1) >> 8) & 0xFF;
+		buffer[1] = ((software_disk_size()/8) - (SOFTWARE_DISK_BLOCK_SIZE - 2) + 1) & 0xFF;
+		write_sd_block(buffer, 1);
+	}
+	else {
+		for (unsigned int i = 2; i < software_disk_size() / 8 + 1; i++) {
+			buffer[i] = bitVector[i];
+		}
+		buffer[0] = ((software_disk_size() / 8 + 1) >> 8) & 0xFF;
+		buffer[1] = (software_disk_size() / 8 - 2 + 1) & 0xFF;
+		write_sd_block(buffer, 0);
+	}
+
+	free(buffer);
 	return;
 }
 
@@ -272,7 +301,7 @@ unsigned short get_block_used_bytes(long block_num)
 //Loads an array of longs with the contents of the indirect block
 void get_indirect_block_nums(struct INode* node, unsigned long * buf)
 {
-	if (node->directBlock == 0) {
+	if (node->indirectBlock == 0) {
 		puts("Error: Indicated block has no indirect blocks.");
 		return;
 	}
@@ -545,6 +574,7 @@ int delete_file(char *name)
 	init_inode(node);
 	nodes[i] = nodes[num_nodes - 1];
 	num_nodes--;
+	write_inode_to_disk(i);
 	return 1;
 }
 

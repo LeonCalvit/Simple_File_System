@@ -12,7 +12,7 @@ int main(int argc, char *argv[])
 	init_software_disk();
     File f=create_file("BIlly",READ_ONLY);
     write_file(f,"Hello",6);
-
+	delete_file("Billy");
 
     return 0;
 
