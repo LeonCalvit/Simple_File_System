@@ -505,7 +505,14 @@ unsigned long write_file(File file, void *buf, unsigned long numbytes)
 	}
 
 	//Error checking before any writes occur.
-	if (file->mode == READ_ONLY || file->mode == Closed) {
+	if(file->mode == Closed)
+	{
+		fserror=FS_FILE_NOT_OPEN;
+		fs_print_error();
+		return 0;
+	}
+	if (file->mode == READ_ONLY)
+	{
 		fserror = FS_FILE_READ_ONLY;
 		fs_print_error();
 		return 0;
