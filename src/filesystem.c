@@ -517,12 +517,14 @@ unsigned long write_file(File file, void *buf, unsigned long numbytes)
 		fs_print_error();
 		return 0;
 	}
-	if (file->BytePosition > file_length(file)) {
+	if (file->BytePosition > file_length(file))
+	{
 		fserror = FS_IO_ERROR;
 		fs_print_error();
 		return 0;
 	}
-	if (file->BytePosition + numbytes > (SOFTWARE_DISK_BLOCK_SIZE - 2) * (NUM_BLOCKS_IN_INODE + (SOFTWARE_DISK_BLOCK_SIZE-2)/sizeof(unsigned long))) {
+	if (file->BytePosition + numbytes > (SOFTWARE_DISK_BLOCK_SIZE - 2) * (NUM_BLOCKS_IN_INODE + (SOFTWARE_DISK_BLOCK_SIZE-2)/sizeof(unsigned long)))
+	{
 		fserror = FS_EXCEEDS_MAX_FILE_SIZE;
 		fs_print_error();
 		return 0;
@@ -539,7 +541,8 @@ unsigned long write_file(File file, void *buf, unsigned long numbytes)
 		unsigned long current_pos = file->BytePosition, buf_pos = 0;
 		//Need to handle case where the first block is written to, but the whole block isn't written over with the new data.
 		unsigned long cur_block_index = current_pos % SOFTWARE_DISK_BLOCK_SIZE; //The index of the block in the inode.
-		while (numbytes - (current_pos - file->BytePosition) > SOFTWARE_DISK_BLOCK_SIZE - 2) { //While the write is writing full blocks
+		while (numbytes - (current_pos - file->BytePosition) > SOFTWARE_DISK_BLOCK_SIZE - 2)
+		{ //While the write is writing full blocks
 
 			for (int i = 0; i < SOFTWARE_DISK_BLOCK_SIZE; i++) {
 				buffer[i + 2] = buf2[i + buf_pos];
