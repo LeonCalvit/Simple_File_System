@@ -672,6 +672,11 @@ unsigned long write_file(File file, void *buf, unsigned long numbytes)
 			{
 				read_sd_block(buffer, file->node_ptr->indirectBlock);
 				unsigned long index = first_free_block();
+				if (index == -1) {
+					fserror = FS_OUT_OF_SPACE;
+					fs_print_error();
+					break;
+				}
 				flip_block_availability(index);
 				for (int j = 0; j < sizeof(unsigned long); j++)
 				{
