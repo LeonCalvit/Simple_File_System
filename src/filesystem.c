@@ -739,7 +739,42 @@ int seek_file(File file, unsigned long bytepos)
 			fs_print_error();
 			return 0;
 		}
-		//TODO: More complex case of if the bytepos is bigger than the file
+
+		
+		unsigned char *buffer = calloc(SOFTWARE_DISK_BLOCK_SIZE, 1);
+		unsigned long bytes_needed = bytepos - file_length(file);
+		int blocks_needed = bytes_needed % SOFTWARE_DISK_BLOCK_SIZE;
+		unsigned long last_block_addr = get_block_num_from_file(file, file->node_ptr->num_blocks);
+		unsigned long space_on_last_block = 512 - 2 - get_block_used_bytes(last_block_addr);
+
+		for (int i = 0; i < blocks_needed; i++)
+		{
+			file->node_ptr->num_blocks++;
+			long index = first_free_block();
+			if (index == -1)
+			{
+				fserror = FS_OUT_OF_SPACE;
+				fs_print_error();
+				return 0;
+			}
+			if (file->node_ptr->num_blocks > NUM_BLOCKS_IN_INODE)
+			{
+				read_sd_block(buffer, file->node_ptr->indirectBlock);
+
+				flip_block_availability(index);
+				for (int j = 0; j < sizeof(unsigned long); j++)
+				{
+					buffer[2 + (file->node_ptr->num_blocks - NUM_BLOCKS_IN_INODE) * sizeof(unsigned long)] = (index >> ((sizeof(unsigned long) - j) * 8)) & 0xFF;
+				}
+			}
+			else
+			{
+				flip_block_availability(index);
+				file->node_ptr->directBlock[file->node_ptr->num_blocks] = index;
+			}
+		}
+		file->BytePosition = bytepos;
+		free(buffer);
 	}
 
 	return 1;
