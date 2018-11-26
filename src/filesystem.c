@@ -407,13 +407,41 @@ unsigned long get_next_free_Inode()
 // ----------------------------------------------------------
 
 //------------------Needed Functions--------------------
+// open existing file with pathname 'name' and access mode 'mode'.  Current file
+// position is set at byte 0.  Returns NULL on error. Always sets 'fserror' global.
 File open_file(char *name, FileMode mode)
 {
 	if (!initialized)
 	{
 		init_fs();
 	}
-	return NULL;
+	if (!file_exists(name))
+	{
+		fserror = FS_FILE_NOT_FOUND;
+		fs_print_error();
+		return NULL;
+	}
+
+	struct INode *node = NULL;
+	int i = 0;
+	//Find the correct number of the specified INode in the array of inodes.
+	//Always finds a value because code above checks that said file exists first.
+	for (; i < num_nodes; i++)
+	{
+		if (strcmp(name, nodes[i].name) == 0)
+		{
+			node = &nodes[i];
+			break;
+		}
+	}
+	File f = malloc(sizeof(FileInternals));
+	init_file(f);
+	f->name = node->name;
+	f->node_ptr = node;
+	f->BytePosition = 0;
+	f->mode = mode;
+	fserror = FS_NONE;
+	return f;
 }
 
 // create and open new file with pathname 'name' and access mode 'mode'.  Current file position is set at byte 0.  Returns NULL on error. Always sets 'fserror' global.
