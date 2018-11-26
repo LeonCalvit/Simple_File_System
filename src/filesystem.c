@@ -505,17 +505,26 @@ unsigned long write_file(File file, void *buf, unsigned long numbytes)
 	}
 
 	//Error checking before any writes occur.
-	if (file->mode == READ_ONLY || file->mode == Closed) {
+	if(file->mode == Closed)
+	{
+		fserror=FS_FILE_NOT_OPEN;
+		fs_print_error();
+		return 0;
+	}
+	if (file->mode == READ_ONLY)
+	{
 		fserror = FS_FILE_READ_ONLY;
 		fs_print_error();
 		return 0;
 	}
-	if (file->BytePosition > file_length(file)) {
+	if (file->BytePosition > file_length(file))
+	{
 		fserror = FS_IO_ERROR;
 		fs_print_error();
 		return 0;
 	}
-	if (file->BytePosition + numbytes > (SOFTWARE_DISK_BLOCK_SIZE - 2) * (NUM_BLOCKS_IN_INODE + (SOFTWARE_DISK_BLOCK_SIZE-2)/sizeof(unsigned long))) {
+	if (file->BytePosition + numbytes > (SOFTWARE_DISK_BLOCK_SIZE - 2) * (NUM_BLOCKS_IN_INODE + (SOFTWARE_DISK_BLOCK_SIZE-2)/sizeof(unsigned long)))
+	{
 		fserror = FS_EXCEEDS_MAX_FILE_SIZE;
 		fs_print_error();
 		return 0;
@@ -528,7 +537,7 @@ unsigned long write_file(File file, void *buf, unsigned long numbytes)
 	unsigned long cur_block_index = current_pos / (SOFTWARE_DISK_BLOCK_SIZE-2); //The index of the block in the inode.
 	unsigned long cur_block = get_block_num_from_file(file, cur_block_index); //The index of the block on the disk
 	//Write where only the first block is affected
-	if (file->BytePosition % (SOFTWARE_DISK_BLOCK_SIZE - 2) + numbytes < SOFTWARE_DISK_BLOCK_SIZE) 
+	if (file->BytePosition % (SOFTWARE_DISK_BLOCK_SIZE - 2) + numbytes < SOFTWARE_DISK_BLOCK_SIZE)
 	{
 		unsigned short size = numbytes - (current_pos - file->BytePosition); //Number of bytes for the current block to write
 		read_sd_block(buffer, cur_block);
@@ -540,7 +549,7 @@ unsigned long write_file(File file, void *buf, unsigned long numbytes)
 		//This order of operations is correct.  It is NOT supposed to be size - (byteposition + numbytes)
 		buffer[0] = (size >> 8) & 0xFF;
 		buffer[1] = size & 0xFF;
-		
+
 		write_sd_block(buffer, cur_block);
 		free(buffer);
 		return numbytes;
@@ -596,7 +605,7 @@ unsigned long write_file(File file, void *buf, unsigned long numbytes)
 		}
 		for (unsigned int i = 0; i < SOFTWARE_DISK_BLOCK_SIZE; i++) { buffer[i] = 0; } //Zero the buffer
 		unsigned short size = numbytes - (current_pos - file->BytePosition); //Number of bytes for the current block to write
-		
+
 		if (size > get_block_used_bytes(cur_block)) { //If the remaining bytes to write will increase the size of the file
 			buffer[0] = (size >> 8) & 0xFF;
 			buffer[1] = size & 0xFF;
