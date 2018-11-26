@@ -481,7 +481,7 @@ File create_file(char *name, FileMode mode)
 		return NULL;
 	}
 
-	// init in volitile file struct
+	// init in volatile file struct
 	File f = malloc(sizeof(File));
 	f->BytePosition = 0;
 	f->mode = mode;
