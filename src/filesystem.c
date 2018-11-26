@@ -493,7 +493,37 @@ unsigned long read_file(File file, void *buf, unsigned long numbytes)
 	{
 		init_fs();
 	}
-	return 1;
+	if (file->mode == Closed) 
+	{
+		fserror = FS_FILE_NOT_OPEN;
+		fs_print_error();
+		return 0;
+	}
+	if (file->BytePosition > file_length(file))
+	{
+		fserror = FS_IO_ERROR;
+		fs_print_error();
+		return 0;
+	}
+	unsigned char* buffer = calloc(SOFTWARE_DISK_BLOCK_SIZE, 1);
+	unsigned char* buf2 = buf;
+	unsigned long current_pos = file->BytePosition % (SOFTWARE_DISK_BLOCK_SIZE - 2);
+	unsigned long bytes_read = 0;
+	read_sd_block(buffer, get_block_num_from_file(file, file->BytePosition / (SOFTWARE_DISK_BLOCK_SIZE - 2)));
+	if(current_pos + numbytes < SOFTWARE_DISK_BLOCK_SIZE) 
+	{//Simple case of reading from only one block
+		for (int i = current_pos + 2; i < 2 + current_pos + numbytes; i++) 
+		{
+			buf2[bytes_read] = buffer[i];
+			bytes_read++;
+		}
+	}
+	else
+	{
+
+	}
+	free(buffer);
+	return bytes_read;
 }
 
 // write 'numbytes' of data from 'buf' into 'file' at the current file position.
@@ -634,6 +664,7 @@ unsigned long write_file(File file, void *buf, unsigned long numbytes)
 			}
 			write_sd_block(buffer, cur_block);
 		}
+		write_fs_to_disk();
 		free(buffer);
 		current_pos += size;
 		return current_pos - file->BytePosition;
@@ -751,7 +782,7 @@ int delete_file(char *name)
 	init_inode(node);
 	nodes[i] = nodes[num_nodes - 1];
 	num_nodes--;
-	write_inode_to_disk(i);
+	write_fs_to_disk();
 	return 1;
 }
 
