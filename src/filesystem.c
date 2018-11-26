@@ -749,8 +749,8 @@ int seek_file(File file, unsigned long bytepos)
 		unsigned long bytes_needed = bytepos - file_length(file);
 		// find the number of blocks needed to add to get what is needed
 		int blocks_needed = (bytes_needed % SOFTWARE_DISK_BLOCK_SIZE == 0) ?
-			(bytes_needed/SOFTWARE_DISK_BLOCK_SIZE) :
-			(1+(bytes_needed/SOFTWARE_DISK_BLOCK_SIZE));
+		(bytes_needed / SOFTWARE_DISK_BLOCK_SIZE) :
+		(1 + (bytes_needed / SOFTWARE_DISK_BLOCK_SIZE));
 		unsigned long last_block_addr = get_block_num_from_file(file, file->node_ptr->num_blocks);
 		unsigned long space_on_last_block = 512 - 2 - get_block_used_bytes(last_block_addr);
 
