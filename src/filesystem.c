@@ -511,7 +511,7 @@ void close_file(File file)
 		fs_print_error();
 	}
 
-	// TODO: write any needed changes to file
+	write_fs_to_disk();
 
 	file->mode = Closed;
 	free(file);
