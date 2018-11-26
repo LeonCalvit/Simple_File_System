@@ -511,9 +511,9 @@ unsigned long read_file(File file, void *buf, unsigned long numbytes)
 		fs_print_error();
 		return 0;
 	}
-	unsigned char* buffer = malloc(SOFTWARE_DISK_BLOCK_SIZE);
-	unsigned char* buf2 = &buf;
-	
+	unsigned char *buffer = malloc(SOFTWARE_DISK_BLOCK_SIZE);
+	unsigned char *buf2 = buf;
+
 	unsigned long current_pos_in_buf = file->BytePosition % (SOFTWARE_DISK_BLOCK_SIZE - 2); //Position of the cursor in the block
 	unsigned long bytes_read = 0;
 	unsigned long cur_block_index = file->BytePosition / (SOFTWARE_DISK_BLOCK_SIZE - 2);
