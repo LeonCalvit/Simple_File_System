@@ -87,7 +87,7 @@ void init_fs()
 	//If software_disk_size isn't evenly divisible by 8, then this marks how many bits aren't used.
 	unusedBits = software_disk_size() % 8;
 
-	unsigned char *buffer = malloc(SOFTWARE_DISK_BLOCK_SIZE);
+	char *buffer = malloc(SOFTWARE_DISK_BLOCK_SIZE);
 	unsigned short size;
 	if (read_sd_block(buffer, 0) == 0)
 	{
@@ -199,7 +199,7 @@ void init_fs()
 void write_inode_to_disk(int inode_index)
 {
 	unsigned short used_bytes = MAX_NAME_LENGTH + sizeof(unsigned int) + sizeof(unsigned long) * NUM_BLOCKS_IN_INODE;
-	unsigned char *buffer = malloc(SOFTWARE_DISK_BLOCK_SIZE);
+	char *buffer = malloc(SOFTWARE_DISK_BLOCK_SIZE);
 	buffer[0] = (used_bytes >> 8) & 0xFF;
 	buffer[1] = used_bytes & 0xFF;
 	strcpy(buffer + sizeof(unsigned short), nodes[inode_index].name);
@@ -639,7 +639,7 @@ unsigned long write_file(File file, void *buf, unsigned long numbytes)
 		return current_pos - file->BytePosition;
 	}
 
-	
+
 }
 
 // sets current position in file to 'bytepos', always relative to the
