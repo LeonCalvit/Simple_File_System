@@ -235,7 +235,7 @@ void write_inode_to_disk(int inode_index)
 
 void write_fs_to_disk()
 {
-	for (unsigned int i = 0; i < NUM_BLOCKS_IN_INODE; i++)
+	for (unsigned int i = 0; i < num_nodes; i++)
 	{
 		write_inode_to_disk(i);
 	}
