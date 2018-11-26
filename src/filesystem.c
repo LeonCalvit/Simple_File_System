@@ -308,7 +308,7 @@ void flip_block_availability(unsigned long index)
 //Gets the number of used bytes for the specified block
 unsigned short get_block_used_bytes(long block_num)
 {
-	unsigned char* buffer3 = malloc(SOFTWARE_DISK_BLOCK_SIZE);
+	unsigned char *buffer3 = malloc(SOFTWARE_DISK_BLOCK_SIZE);
 	if (read_sd_block(buffer3, block_num) == 0)
 	{
 		//Reads block into buffer, throws an error and returns if there was an error in reading the block
