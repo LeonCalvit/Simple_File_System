@@ -716,6 +716,7 @@ unsigned long write_file(File file, void *buf, unsigned long numbytes)
 // Always sets 'fserror' global.
 int seek_file(File file, unsigned long bytepos)
 {
+	// Error and setup checking
 	if (!initialized)
 	{
 		init_fs();
@@ -726,13 +727,16 @@ int seek_file(File file, unsigned long bytepos)
 		fs_print_error();
 		return 0;
 	}
+	// The easycase
 	if (bytepos < file_length(file))
 	{
 		file->BytePosition = bytepos;
 		return 1;
 	}
+	// The more complex case of needing to add blocks.
 	else
 	{
+		// Cant be bigger than supported size
 		if (bytepos > MAX_FILE_SIZE)
 		{
 			fserror = FS_EXCEEDS_MAX_FILE_SIZE;
@@ -743,7 +747,10 @@ int seek_file(File file, unsigned long bytepos)
 		
 		unsigned char *buffer = calloc(SOFTWARE_DISK_BLOCK_SIZE, 1);
 		unsigned long bytes_needed = bytepos - file_length(file);
-		int blocks_needed = bytes_needed % SOFTWARE_DISK_BLOCK_SIZE;
+		// find the number of blocks needed to add to get what is needed
+		int blocks_needed = (bytes_needed % SOFTWARE_DISK_BLOCK_SIZE == 0) ?
+			(bytes_needed/SOFTWARE_DISK_BLOCK_SIZE) :
+			(1+(bytes_needed/SOFTWARE_DISK_BLOCK_SIZE));
 		unsigned long last_block_addr = get_block_num_from_file(file, file->node_ptr->num_blocks);
 		unsigned long space_on_last_block = 512 - 2 - get_block_used_bytes(last_block_addr);
 
