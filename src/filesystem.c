@@ -100,7 +100,7 @@ void init_fs()
 	//printf("Value of first half of size -> %d\n", size);
 	size |= buffer[1];
 	//printf("Value of size -> %d\n", size);
-	
+
 	if (size == 0)
 	{
 		//Generates bitvector from blocks on disk.
@@ -497,7 +497,7 @@ File create_file(char *name, FileMode mode)
 	flip_block_availability(f->node_ptr->directBlock[0]);
 	f->node_ptr->num_blocks = 1;
 	//Indirect block is unassigned until needed.
-
+	fserror = FS_NONE;
 	return f;
 }
 
@@ -513,6 +513,8 @@ void close_file(File file)
 	// TODO: write any needed changes to file
 
 	file->mode = Closed;
+	free(file);
+	fserror = FS_NONE;
 	return;
 }
 
@@ -527,7 +529,7 @@ unsigned long read_file(File file, void *buf, unsigned long numbytes)
 	{
 		init_fs();
 	}
-	if (file->mode == Closed) 
+	if (file->mode == Closed)
 	{
 		fserror = FS_FILE_NOT_OPEN;
 		fs_print_error();
@@ -589,6 +591,7 @@ unsigned long read_file(File file, void *buf, unsigned long numbytes)
 		}
 	}
 	free(buffer);
+	fserror = FS_NONE;
 	return bytes_read;
 }
 
@@ -648,6 +651,7 @@ unsigned long write_file(File file, void *buf, unsigned long numbytes)
 
 		write_sd_block(buffer, cur_block);
 		free(buffer);
+		fserror = FS_NONE;
 		return numbytes;
 	}
 	else
@@ -734,6 +738,7 @@ unsigned long write_file(File file, void *buf, unsigned long numbytes)
 		write_fs_to_disk();
 		free(buffer);
 		current_pos += size;
+		fserror = FS_NONE;
 		return current_pos - file->BytePosition;
 	}
 }
@@ -759,6 +764,7 @@ int seek_file(File file, unsigned long bytepos)
 	if (bytepos < file_length(file))
 	{
 		file->BytePosition = bytepos;
+		fserror = FS_NONE;
 		return 1;
 	}
 	// The more complex case of needing to add blocks.
@@ -772,13 +778,10 @@ int seek_file(File file, unsigned long bytepos)
 			return 0;
 		}
 
-		
 		unsigned char *buffer = calloc(SOFTWARE_DISK_BLOCK_SIZE, 1);
 		unsigned long bytes_needed = bytepos - file_length(file);
 		// find the number of blocks needed to add to get what is needed
-		int blocks_needed = (bytes_needed % SOFTWARE_DISK_BLOCK_SIZE == 0) ?
-		(bytes_needed / SOFTWARE_DISK_BLOCK_SIZE) :
-		(1 + (bytes_needed / SOFTWARE_DISK_BLOCK_SIZE));
+		int blocks_needed = (bytes_needed % SOFTWARE_DISK_BLOCK_SIZE == 0) ? (bytes_needed / SOFTWARE_DISK_BLOCK_SIZE) : (1 + (bytes_needed / SOFTWARE_DISK_BLOCK_SIZE));
 		unsigned long last_block_addr = get_block_num_from_file(file, file->node_ptr->num_blocks);
 		unsigned long space_on_last_block = 512 - 2 - get_block_used_bytes(last_block_addr);
 
@@ -811,7 +814,8 @@ int seek_file(File file, unsigned long bytepos)
 		file->BytePosition = bytepos;
 		free(buffer);
 	}
-
+	write_fs_to_disk();
+	fserror = FS_NONE;
 	return 1;
 }
 
@@ -891,6 +895,7 @@ int delete_file(char *name)
 	nodes[i] = nodes[num_nodes - 1];
 	num_nodes--;
 	write_fs_to_disk();
+	fserror = FS_NONE;
 	return 1;
 }
 
@@ -911,7 +916,7 @@ int file_exists(char *name)
 			return 1;
 		}
 	}
-
+	fserror = FS_NONE;
 	return 0;
 }
 
