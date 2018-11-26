@@ -1,3 +1,7 @@
+// File system implementation for LSU 4103 filesystem assignment.
+// Written by Sam Miller and Leon Calvit, November 218
+
+
 // main private file type: you implement this in filesystem.c
 struct FileInternals;
 
