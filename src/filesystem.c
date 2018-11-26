@@ -21,7 +21,7 @@ struct INode
 	unsigned long directBlock[NUM_BLOCKS_IN_INODE];
 	unsigned long indirectBlock; //The index of the block number that stores the indexes of the blocks where the rest of the data is kept.
 	unsigned int num_blocks;	 //Total number of blocks used for the file.
-	unsigned int num_open;		 //The number of people accessing this file.
+	
 } INode;
 
 typedef struct INode *inode;
@@ -65,7 +65,7 @@ void init_inode(inode i)
 	i->num_blocks = 0;
 	i->file_ptr = NULL;
 	i->indirectBlock = 0;
-	i->num_open = 0;
+	
 	for (int l = 0; l < NUM_BLOCKS_IN_INODE; l++)
 	{
 		i->directBlock[l] = 0;
@@ -421,6 +421,7 @@ File open_file(char *name, FileMode mode)
 		fs_print_error();
 		return NULL;
 	}
+	
 
 	struct INode *node = NULL;
 	int i = 0;
@@ -433,6 +434,11 @@ File open_file(char *name, FileMode mode)
 			node = &nodes[i];
 			break;
 		}
+	}
+	if (node->file_ptr != NULL && node->file_ptr->mode != Closed) { //Disallow concurrent opening of the sam file.
+		fserror = FS_FILE_OPEN;
+		fs_print_error();
+		return NULL;
 	}
 	File f = malloc(sizeof(FileInternals));
 	init_file(f);
@@ -491,7 +497,7 @@ File create_file(char *name, FileMode mode)
 	strcpy(f->node_ptr->name, name);
 	f->name = f->node_ptr->name;
 	f->node_ptr->file_ptr = f;
-	f->node_ptr->num_open = 1;
+	
 
 	f->node_ptr->directBlock[0] = first_free_block();
 	flip_block_availability(f->node_ptr->directBlock[0]);
