@@ -8,7 +8,7 @@
 
 #pragma warning(disable : 4996)
 #define NUM_BLOCKS_IN_INODE 12
-#define TOTAL_NUM_INODES 40
+#define TOTAL_NUM_INODES 200
 #define MAX_NAME_LENGTH 255
 unsigned long maxFileSizeCalc = (SOFTWARE_DISK_BLOCK_SIZE - 2) * (NUM_BLOCKS_IN_INODE + ((SOFTWARE_DISK_BLOCK_SIZE - 2) / (sizeof(unsigned long))));
 #define MAX_FILE_SIZE maxFileSizeCalc
