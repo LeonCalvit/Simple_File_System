@@ -87,7 +87,7 @@ void init_fs()
 	//If software_disk_size isn't evenly divisible by 8, then this marks how many bits aren't used.
 	unusedBits = software_disk_size() % 8;
 
-	char *buffer = malloc(SOFTWARE_DISK_BLOCK_SIZE);
+	unsigned char *buffer = malloc(SOFTWARE_DISK_BLOCK_SIZE);
 	unsigned short size;
 	if (read_sd_block(buffer, 0) == 0)
 	{
@@ -97,7 +97,10 @@ void init_fs()
 		return;
 	}
 	size = buffer[0] << 8;
+	//printf("Value of first half of size -> %d\n", size);
 	size |= buffer[1];
+	//printf("Value of size -> %d\n", size);
+	
 	if (size == 0)
 	{
 		//Generates bitvector from blocks on disk.
@@ -115,7 +118,6 @@ void init_fs()
 			//Reads first two bytes of buffer, which store the number of used bytes of the block, and if that number is greater than 0, sets the appropriate bit in bitVector to true
 			size = buffer[0] << 8;
 			size |= buffer[1];
-
 			if (size > 0)
 			{
 				bitVector[i / 8] |= 0b1 << i % 8;
@@ -125,8 +127,9 @@ void init_fs()
 	}
 	else
 	{
-		for (short i = 0; i < size; i++)
+		for (unsigned short i = 0; i < size; i++)
 		{
+			//printf("Value of i at this iteration ->%d\n Value of size-> %d\n", i, size);
 			bitVector[i] = buffer[i];
 		}
 		bitVector[0] |= 0b11 << 7;
@@ -237,7 +240,7 @@ void write_fs_to_disk()
 		write_inode_to_disk(i);
 	}
 
-	unsigned char *buffer = calloc(SOFTWARE_DISK_BLOCK_SIZE, 1);
+	unsigned char *buffer = malloc(SOFTWARE_DISK_BLOCK_SIZE);
 	if (software_disk_size() > SOFTWARE_DISK_BLOCK_SIZE - 2)
 	{
 		//Write first part of bitVector to buffer
@@ -305,17 +308,17 @@ void flip_block_availability(unsigned long index)
 //Gets the number of used bytes for the specified block
 unsigned short get_block_used_bytes(long block_num)
 {
-	unsigned char *buffer = calloc(SOFTWARE_DISK_BLOCK_SIZE, sizeof(unsigned char));
-	if (read_sd_block(buffer, block_num) == 0)
+	unsigned char* buffer3 = malloc(SOFTWARE_DISK_BLOCK_SIZE);
+	if (read_sd_block(buffer3, block_num) == 0)
 	{
 		//Reads block into buffer, throws an error and returns if there was an error in reading the block
 		fserror = FS_IO_ERROR;
 		fs_print_error();
 		return 0;
 	}
-	unsigned short size = buffer[0] << 8;
-	size |= buffer[1];
-	free(buffer);
+	unsigned short size = buffer3[0] << 8;
+	size |= buffer3[1];
+	free(buffer3);
 	return size;
 }
 
@@ -327,7 +330,7 @@ void get_indirect_block_nums(struct INode *node, unsigned long *buf)
 		puts("Error: Indicated block has no indirect blocks.");
 		return;
 	}
-	unsigned long *indirect_block = calloc(SOFTWARE_DISK_BLOCK_SIZE, sizeof(unsigned char));
+	unsigned long *indirect_block = malloc(SOFTWARE_DISK_BLOCK_SIZE);
 	if (read_sd_block(indirect_block, node->indirectBlock) == 0)
 	{
 		//Reads block into buffer, throws an error and returns if there was an error in reading the block
@@ -396,7 +399,7 @@ unsigned long get_next_free_Inode()
 	init_inode(node);
 	for (int i = 3; i <= 2 + TOTAL_NUM_INODES; i++)
 	{
-		unsigned char *buffer = calloc(SOFTWARE_DISK_BLOCK_SIZE, sizeof(unsigned char));
+		unsigned char *buffer = malloc(SOFTWARE_DISK_BLOCK_SIZE);
 		read_sd_block(buffer, i);
 	}
 }
@@ -494,7 +497,68 @@ unsigned long read_file(File file, void *buf, unsigned long numbytes)
 	{
 		init_fs();
 	}
-	return 1;
+	if (file->mode == Closed) 
+	{
+		fserror = FS_FILE_NOT_OPEN;
+		fs_print_error();
+		return 0;
+	}
+	if (file->BytePosition > file_length(file))
+	{
+		fserror = FS_IO_ERROR;
+		fs_print_error();
+		return 0;
+	}
+	unsigned char* buffer = malloc(SOFTWARE_DISK_BLOCK_SIZE);
+	unsigned char* buf2 = &buf;
+	
+	unsigned long current_pos_in_buf = file->BytePosition % (SOFTWARE_DISK_BLOCK_SIZE - 2); //Position of the cursor in the block
+	unsigned long bytes_read = 0;
+	unsigned long cur_block_index = file->BytePosition / (SOFTWARE_DISK_BLOCK_SIZE - 2);
+	unsigned long cur_block = get_block_num_from_file(file, cur_block_index);
+	if(current_pos_in_buf + numbytes < SOFTWARE_DISK_BLOCK_SIZE)
+	{//Simple case of reading from only one block
+		read_sd_block(buffer, get_block_num_from_file(file, cur_block_index));
+		for (int i = current_pos_in_buf + 2; i < 2 + current_pos_in_buf + numbytes; i++)
+		{
+			((unsigned char*)buf)[bytes_read] = buffer[i];
+			bytes_read++;
+		}
+	}
+	else
+	{
+		
+		//Read from first block, which isn't guaranteed to start at the start of a block
+		read_sd_block(buffer, get_block_num_from_file(file, cur_block_index));
+		for (int i = current_pos_in_buf + 2; i < SOFTWARE_DISK_BLOCK_SIZE; i++) {
+			buf2[bytes_read] = buffer[i];
+			bytes_read++;
+		}
+		cur_block_index++;
+		cur_block = get_block_num_from_file(file, cur_block_index);
+		
+		//Read all full blocks in the middle
+		while ((numbytes - bytes_read) > SOFTWARE_DISK_BLOCK_SIZE - 2)
+		{
+			read_sd_block(buffer, get_block_num_from_file(file, cur_block_index));
+			for (int j = 2; j < SOFTWARE_DISK_BLOCK_SIZE; j++)
+			{
+				buf2[bytes_read] = buffer[j];
+				bytes_read++;
+			}
+			cur_block_index++;
+			cur_block = get_block_num_from_file(file, cur_block_index);
+		}
+		read_sd_block(buffer, get_block_num_from_file(file, cur_block));
+		//Read last block
+		for (int i = 2; bytes_read < numbytes; i++) 
+		{
+			buf2[bytes_read] = buffer[i];
+			bytes_read++;
+		}
+	}
+	free(buffer);
+	return bytes_read;
 }
 
 // write 'numbytes' of data from 'buf' into 'file' at the current file position.
@@ -520,20 +584,16 @@ unsigned long write_file(File file, void *buf, unsigned long numbytes)
 		fs_print_error();
 		return 0;
 	}
-	if (file->BytePosition > file_length(file))
-	{
-		fserror = FS_IO_ERROR;
-		fs_print_error();
-		return 0;
-	}
+	
 	if (file->BytePosition + numbytes > (SOFTWARE_DISK_BLOCK_SIZE - 2) * (NUM_BLOCKS_IN_INODE + (SOFTWARE_DISK_BLOCK_SIZE - 2) / sizeof(unsigned long)))
 	{
 		fserror = FS_EXCEEDS_MAX_FILE_SIZE;
 		fs_print_error();
 		return 0;
 	}
-
-	unsigned char *buffer = calloc(SOFTWARE_DISK_BLOCK_SIZE, 1);
+	
+	//unsigned char *buffer = (unsigned char*)malloc(SOFTWARE_DISK_BLOCK_SIZE);
+	unsigned char* buffer = malloc(SOFTWARE_DISK_BLOCK_SIZE);
 	unsigned char *buf2 = buf; //Void pointers don't allow pointer arithmetic apparently? This is a simple workaround.
 	unsigned long current_pos = file->BytePosition;
 	unsigned long buf_pos = 0;
@@ -583,6 +643,7 @@ unsigned long write_file(File file, void *buf, unsigned long numbytes)
 				flip_block_availability(file->node_ptr->directBlock[file->node_ptr->num_blocks - 1]);
 			}
 		}
+
 		read_sd_block(buffer, cur_block);
 		for (int i = current_pos % (SOFTWARE_DISK_BLOCK_SIZE - 2); i < SOFTWARE_DISK_BLOCK_SIZE; i++)
 		{
@@ -592,7 +653,7 @@ unsigned long write_file(File file, void *buf, unsigned long numbytes)
 		buffer[1] = (SOFTWARE_DISK_BLOCK_SIZE - 2) & 0xFF;
 		write_sd_block(buffer, cur_block);
 		cur_block_index++;
-		cur_block++;
+		cur_block = get_block_num_from_file(file, cur_block_index);
 		buf_pos += SOFTWARE_DISK_BLOCK_SIZE - 2;
 		current_pos += SOFTWARE_DISK_BLOCK_SIZE - 2;
 		while (numbytes - (current_pos - file->BytePosition) > SOFTWARE_DISK_BLOCK_SIZE - 2)
@@ -606,7 +667,7 @@ unsigned long write_file(File file, void *buf, unsigned long numbytes)
 			buffer[1] = (SOFTWARE_DISK_BLOCK_SIZE - 2) & 0xFF;
 			write_sd_block(buffer, get_block_num_from_file(file, cur_block_index));
 			cur_block_index++;
-			cur_block++;
+			cur_block = get_block_num_from_file(file, cur_block_index);;
 			buf_pos += SOFTWARE_DISK_BLOCK_SIZE - 2;
 			current_pos += SOFTWARE_DISK_BLOCK_SIZE - 2;
 		}
@@ -635,6 +696,7 @@ unsigned long write_file(File file, void *buf, unsigned long numbytes)
 			}
 			write_sd_block(buffer, cur_block);
 		}
+		write_fs_to_disk();
 		free(buffer);
 		current_pos += size;
 		return current_pos - file->BytePosition;
@@ -720,7 +782,7 @@ int delete_file(char *name)
 		return 0;
 	}
 
-	unsigned char *empty_buffer = calloc(SOFTWARE_DISK_BLOCK_SIZE, sizeof(unsigned char));
+	unsigned char *empty_buffer = calloc(SOFTWARE_DISK_BLOCK_SIZE, 1);
 	if (node->num_blocks < NUM_BLOCKS_IN_INODE)
 	{ //Block numbers aren't being stored in the indirect nodes, so deleting the INode is simpler;
 		//Goes through blocks of the INode and writes zeroes to them
@@ -752,7 +814,7 @@ int delete_file(char *name)
 	init_inode(node);
 	nodes[i] = nodes[num_nodes - 1];
 	num_nodes--;
-	write_inode_to_disk(i);
+	write_fs_to_disk();
 	return 1;
 }
 
