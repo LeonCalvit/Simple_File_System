@@ -87,7 +87,7 @@ void init_fs()
 	//If software_disk_size isn't evenly divisible by 8, then this marks how many bits aren't used.
 	unusedBits = software_disk_size() % 8;
 
-	char *buffer = malloc(SOFTWARE_DISK_BLOCK_SIZE);
+	unsigned char *buffer = calloc(SOFTWARE_DISK_BLOCK_SIZE, 1);
 	unsigned short size;
 	if (read_sd_block(buffer, 0) == 0)
 	{
@@ -97,7 +97,10 @@ void init_fs()
 		return;
 	}
 	size = buffer[0] << 8;
+	//printf("Value of first half of size -> %d\n", size);
 	size |= buffer[1];
+	//printf("Value of size -> %d\n", size);
+	
 	if (size == 0)
 	{
 		//Generates bitvector from blocks on disk.
@@ -115,7 +118,6 @@ void init_fs()
 			//Reads first two bytes of buffer, which store the number of used bytes of the block, and if that number is greater than 0, sets the appropriate bit in bitVector to true
 			size = buffer[0] << 8;
 			size |= buffer[1];
-
 			if (size > 0)
 			{
 				bitVector[i / 8] |= 0b1 << i % 8;
@@ -125,8 +127,9 @@ void init_fs()
 	}
 	else
 	{
-		for (short i = 0; i < size; i++)
+		for (unsigned short i = 0; i < size; i++)
 		{
+			//printf("Value of i at this iteration ->%d\n Value of size-> %d\n", i, size);
 			bitVector[i] = buffer[i];
 		}
 		bitVector[0] |= 0b11 << 7;
@@ -507,20 +510,51 @@ unsigned long read_file(File file, void *buf, unsigned long numbytes)
 	}
 	unsigned char* buffer = calloc(SOFTWARE_DISK_BLOCK_SIZE, 1);
 	unsigned char* buf2 = buf;
-	unsigned long current_pos = file->BytePosition % (SOFTWARE_DISK_BLOCK_SIZE - 2);
+	unsigned long current_pos_in_buf = file->BytePosition % (SOFTWARE_DISK_BLOCK_SIZE - 2); //Position of the cursor in the block
 	unsigned long bytes_read = 0;
-	read_sd_block(buffer, get_block_num_from_file(file, file->BytePosition / (SOFTWARE_DISK_BLOCK_SIZE - 2)));
-	if(current_pos + numbytes < SOFTWARE_DISK_BLOCK_SIZE) 
+	unsigned long cur_block_index = file->BytePosition / (SOFTWARE_DISK_BLOCK_SIZE - 2);
+	unsigned long cur_block = get_block_num_from_file(file, cur_block_index);
+	if(current_pos_in_buf + numbytes < SOFTWARE_DISK_BLOCK_SIZE)
 	{//Simple case of reading from only one block
-		for (int i = current_pos + 2; i < 2 + current_pos + numbytes; i++) 
+		read_sd_block(buffer, get_block_num_from_file(file, cur_block_index));
+		for (int i = current_pos_in_buf + 2; i < 2 + current_pos_in_buf + numbytes; i++)
 		{
 			buf2[bytes_read] = buffer[i];
 			bytes_read++;
 		}
+		
 	}
 	else
 	{
-
+		
+		//Read from first block, which isn't guaranteed to start at the start of a block
+		read_sd_block(buffer, get_block_num_from_file(file, cur_block_index));
+		for (int i = current_pos_in_buf + 2; i < SOFTWARE_DISK_BLOCK_SIZE; i++) {
+			buf2[bytes_read] = buffer[i];
+			bytes_read++;
+		}
+		cur_block_index++;
+		cur_block = get_block_num_from_file(file, cur_block_index);
+		
+		//Read all full blocks in the middle
+		while ((numbytes - bytes_read) > SOFTWARE_DISK_BLOCK_SIZE - 2)
+		{
+			read_sd_block(buffer, get_block_num_from_file(file, cur_block_index));
+			for (int j = 2; j < SOFTWARE_DISK_BLOCK_SIZE; j++)
+			{
+				buf2[bytes_read] = buffer[j];
+				bytes_read++;
+			}
+			cur_block_index++;
+			cur_block = get_block_num_from_file(file, cur_block_index);
+		}
+		read_sd_block(buffer, get_block_num_from_file(file, cur_block));
+		//Read last block
+		for (int i = 2; bytes_read < numbytes; i++) 
+		{
+			buf2[bytes_read] = buffer[i];
+			bytes_read++;
+		}
 	}
 	free(buffer);
 	return bytes_read;
@@ -612,6 +646,7 @@ unsigned long write_file(File file, void *buf, unsigned long numbytes)
 				flip_block_availability(file->node_ptr->directBlock[file->node_ptr->num_blocks - 1]);
 			}
 		}
+
 		read_sd_block(buffer, cur_block);
 		for (int i = current_pos % (SOFTWARE_DISK_BLOCK_SIZE - 2); i < SOFTWARE_DISK_BLOCK_SIZE; i++)
 		{
@@ -621,7 +656,7 @@ unsigned long write_file(File file, void *buf, unsigned long numbytes)
 		buffer[1] = (SOFTWARE_DISK_BLOCK_SIZE - 2) & 0xFF;
 		write_sd_block(buffer, cur_block);
 		cur_block_index++;
-		cur_block++;
+		cur_block = get_block_num_from_file(file, cur_block_index);
 		buf_pos += SOFTWARE_DISK_BLOCK_SIZE - 2;
 		current_pos += SOFTWARE_DISK_BLOCK_SIZE - 2;
 		while (numbytes - (current_pos - file->BytePosition) > SOFTWARE_DISK_BLOCK_SIZE - 2)
@@ -635,7 +670,7 @@ unsigned long write_file(File file, void *buf, unsigned long numbytes)
 			buffer[1] = (SOFTWARE_DISK_BLOCK_SIZE - 2) & 0xFF;
 			write_sd_block(buffer, get_block_num_from_file(file, cur_block_index));
 			cur_block_index++;
-			cur_block++;
+			cur_block = get_block_num_from_file(file, cur_block_index);;
 			buf_pos += SOFTWARE_DISK_BLOCK_SIZE - 2;
 			current_pos += SOFTWARE_DISK_BLOCK_SIZE - 2;
 		}
