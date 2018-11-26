@@ -419,6 +419,7 @@ File open_file(char *name, FileMode mode)
 // create and open new file with pathname 'name' and access mode 'mode'.  Current file position is set at byte 0.  Returns NULL on error. Always sets 'fserror' global.
 File create_file(char *name, FileMode mode)
 {
+	fserror = FS_NONE;
 	if (!initialized)
 	{
 		init_fs();
@@ -492,6 +493,7 @@ void close_file(File file)
 // 'fserror' global.
 unsigned long read_file(File file, void *buf, unsigned long numbytes)
 {
+	fserror = FS_NONE;
 	if (!initialized)
 	{
 		init_fs();
@@ -565,6 +567,7 @@ unsigned long read_file(File file, void *buf, unsigned long numbytes)
 // Always sets 'fserror' global.
 unsigned long write_file(File file, void *buf, unsigned long numbytes)
 {
+	fserror = FS_NONE;
 	if (!initialized)
 	{
 		init_fs();
@@ -743,15 +746,18 @@ int seek_file(File file, unsigned long bytepos)
 // Always sets 'fserror' global.
 unsigned long file_length(File file)
 {
+	fserror = FS_NONE;
 	//All but the last block use SOFTWARE_DISK_BLOCK_SIZE minus 2 bytes, then add the number of used bytes for the last block
-	unsigned long size = (file->node_ptr->num_blocks - 1) * (SOFTWARE_DISK_BLOCK_SIZE - 2) + get_block_used_bytes(get_block_num_from_file(file, file->node_ptr->num_blocks - 1));
-	return size;
+	
+	return (file->node_ptr->num_blocks) * (SOFTWARE_DISK_BLOCK_SIZE - 2) + get_block_used_bytes(get_block_num_from_file(file, file->node_ptr->num_blocks - 1));
+	
 }
 
 // deletes the file named 'name', if it exists. Returns 1 on success, 0 on failure.
 // Always sets 'fserror' global.
 int delete_file(char *name)
 {
+	fserror = FS_NONE;
 	// Delete file successfully
 	if (!file_exists(name))
 	{
@@ -821,6 +827,7 @@ int delete_file(char *name)
 // Always sets 'fserror' global.
 int file_exists(char *name)
 {
+	fserror = FS_NONE;
 	if (!initialized)
 	{
 		init_fs();
