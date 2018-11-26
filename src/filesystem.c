@@ -542,10 +542,34 @@ unsigned long write_file(File file, void *buf, unsigned long numbytes)
 		buffer[1] = size & 0xFF;
 		
 		write_sd_block(buffer, cur_block);
+		free(buffer);
+		return numbytes;
 	}
 	else
 	{ //Every other case.
-		
+		//If there aren't enough blocks allocated to the inode to store the write
+		while(file->BytePosition + numbytes > file_length(file) + SOFTWARE_DISK_BLOCK_SIZE - get_block_used_bytes(get_block_num_from_file(file, file->node_ptr->num_blocks-1)))
+			{
+			file->node_ptr->num_blocks++;
+			if (file->node_ptr->num_blocks > NUM_BLOCKS_IN_INODE) {
+				read_sd_block(buffer, file->node_ptr->indirectBlock);
+				unsigned long index = first_free_block();
+				flip_block_availability(index);
+				for (int j = 0; j < sizeof(unsigned long); j++) {
+					buffer[2 + (file->node_ptr->num_blocks - NUM_BLOCKS_IN_INODE) * sizeof(unsigned long)] = (index >> ((sizeof(unsigned long) - j) * 8)) & 0xFF;
+				}
+				unsigned short size = buffer[0] << 8;
+				size |= buffer[1];
+				size += 2;
+				buffer[0] = (size >> 8) & 0xFF;
+				buffer[1] = size & 0xFF;
+				write_sd_block(buffer, file->node_ptr->indirectBlock);
+			}
+			else {
+				file->node_ptr->directBlock[file->node_ptr->num_blocks - 1] = first_free_block();
+				flip_block_availability(file->node_ptr->directBlock[file->node_ptr->num_blocks - 1]);
+			}
+		}
 		read_sd_block(buffer, cur_block);
 		for (int i = current_pos % (SOFTWARE_DISK_BLOCK_SIZE-2); i < SOFTWARE_DISK_BLOCK_SIZE; i++) {
 			buffer[i + 2] = buf2[i];
@@ -569,8 +593,6 @@ unsigned long write_file(File file, void *buf, unsigned long numbytes)
 			cur_block++;
 			buf_pos += SOFTWARE_DISK_BLOCK_SIZE - 2;
 			current_pos += SOFTWARE_DISK_BLOCK_SIZE - 2;
-
-			//TODO: allocate additional blocks if needed.
 		}
 		for (unsigned int i = 0; i < SOFTWARE_DISK_BLOCK_SIZE; i++) { buffer[i] = 0; } //Zero the buffer
 		unsigned short size = numbytes - (current_pos - file->BytePosition); //Number of bytes for the current block to write
@@ -595,8 +617,7 @@ unsigned long write_file(File file, void *buf, unsigned long numbytes)
 		return current_pos - file->BytePosition;
 	}
 
-	free(buffer);
-	return numbytes;
+	
 }
 
 // sets current position in file to 'bytepos', always relative to the
