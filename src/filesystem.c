@@ -9,8 +9,9 @@
 #define NUM_BLOCKS_IN_INODE 12
 #define TOTAL_NUM_INODES 40
 #define MAX_NAME_LENGTH 255
-unsigned long maxFileSizeCalc = (SOFTWARE_DISK_BLOCK_SIZE-2) * (NUM_BLOCKS_IN_INODE + ((SOFTWARE_DISK_BLOCK_SIZE-2)/(sizeof(unsigned long))));
+unsigned long maxFileSizeCalc = (SOFTWARE_DISK_BLOCK_SIZE - 2) * (NUM_BLOCKS_IN_INODE + ((SOFTWARE_DISK_BLOCK_SIZE - 2) / (sizeof(unsigned long))));
 #define MAX_FILE_SIZE maxFileSizeCalc
+
 // ------------------------STRUCTS-------------------------
 //Inode
 struct INode
@@ -19,8 +20,8 @@ struct INode
 	char name[MAX_NAME_LENGTH];
 	unsigned long directBlock[NUM_BLOCKS_IN_INODE];
 	unsigned long indirectBlock; //The index of the block number that stores the indexes of the blocks where the rest of the data is kept.
-	unsigned int num_blocks; //Total number of blocks used for the file.
-	unsigned int num_open; //The number of people accessing this file.
+	unsigned int num_blocks;	 //Total number of blocks used for the file.
+	unsigned int num_open;		 //The number of people accessing this file.
 } INode;
 
 typedef struct INode *inode;
@@ -369,7 +370,7 @@ unsigned long get_block_num_from_file(File file, unsigned int num)
 //Takes input data of size size, and pads the data to the desired size in the inputted buffer.
 //Also places two bytes in the front to indicate how many used bytes there are.
 //Size should not be more than two smaller than desired_size
-void pad_block(char * input_data, short size, char* buffer, short desired_size)
+void pad_block(char *input_data, short size, char *buffer, short desired_size)
 {
 	if (desired_size - 2 < size)
 	{
@@ -428,7 +429,8 @@ File create_file(char *name, FileMode mode)
 			break;
 		}
 	}
-	if (i > 254) {
+	if (i > 254)
+	{
 		fserror = FS_ILLEGAL_FILENAME;
 		fs_print_error();
 		return NULL;
@@ -470,7 +472,7 @@ File create_file(char *name, FileMode mode)
 // close 'file'.  Always sets 'fserror' global.
 void close_file(File file)
 {
-	if(file->mode == Closed)
+	if (file->mode == Closed)
 	{
 		fserror = FS_FILE_NOT_OPEN;
 		fs_print_error();
@@ -505,9 +507,9 @@ unsigned long write_file(File file, void *buf, unsigned long numbytes)
 	}
 
 	//Error checking before any writes occur.
-	if(file->mode == Closed)
+	if (file->mode == Closed)
 	{
-		fserror=FS_FILE_NOT_OPEN;
+		fserror = FS_FILE_NOT_OPEN;
 		fs_print_error();
 		return 0;
 	}
@@ -523,28 +525,29 @@ unsigned long write_file(File file, void *buf, unsigned long numbytes)
 		fs_print_error();
 		return 0;
 	}
-	if (file->BytePosition + numbytes > (SOFTWARE_DISK_BLOCK_SIZE - 2) * (NUM_BLOCKS_IN_INODE + (SOFTWARE_DISK_BLOCK_SIZE-2)/sizeof(unsigned long)))
+	if (file->BytePosition + numbytes > (SOFTWARE_DISK_BLOCK_SIZE - 2) * (NUM_BLOCKS_IN_INODE + (SOFTWARE_DISK_BLOCK_SIZE - 2) / sizeof(unsigned long)))
 	{
 		fserror = FS_EXCEEDS_MAX_FILE_SIZE;
 		fs_print_error();
 		return 0;
 	}
 
-	unsigned char* buffer = calloc(SOFTWARE_DISK_BLOCK_SIZE, 1);
-	unsigned char* buf2 = buf; //Void pointers don't allow pointer arithmetic apparently? This is a simple workaround.
+	unsigned char *buffer = calloc(SOFTWARE_DISK_BLOCK_SIZE, 1);
+	unsigned char *buf2 = buf; //Void pointers don't allow pointer arithmetic apparently? This is a simple workaround.
 	unsigned long current_pos = file->BytePosition;
 	unsigned long buf_pos = 0;
-	unsigned long cur_block_index = current_pos / (SOFTWARE_DISK_BLOCK_SIZE-2); //The index of the block in the inode.
-	unsigned long cur_block = get_block_num_from_file(file, cur_block_index); //The index of the block on the disk
+	unsigned long cur_block_index = current_pos / (SOFTWARE_DISK_BLOCK_SIZE - 2); //The index of the block in the inode.
+	unsigned long cur_block = get_block_num_from_file(file, cur_block_index);	 //The index of the block on the disk
 	//Write where only the first block is affected
 	if (file->BytePosition % (SOFTWARE_DISK_BLOCK_SIZE - 2) + numbytes < SOFTWARE_DISK_BLOCK_SIZE)
 	{
 		unsigned short size = numbytes - (current_pos - file->BytePosition); //Number of bytes for the current block to write
 		read_sd_block(buffer, cur_block);
-		for (int i = 0; i < size; i++) {
+		for (int i = 0; i < size; i++)
+		{
 			buffer[i + 2] = buf2[i];
 		}
-		size = (size - (file->BytePosition % (SOFTWARE_DISK_BLOCK_SIZE-2)) + numbytes) > size ? (size - (file->BytePosition % (SOFTWARE_DISK_BLOCK_SIZE - 2)) + numbytes) : size;
+		size = (size - (file->BytePosition % (SOFTWARE_DISK_BLOCK_SIZE - 2)) + numbytes) > size ? (size - (file->BytePosition % (SOFTWARE_DISK_BLOCK_SIZE - 2)) + numbytes) : size;
 		//set size to the larger of size or the end position of numbytes + byteposition
 		//This order of operations is correct.  It is NOT supposed to be size - (byteposition + numbytes)
 		buffer[0] = (size >> 8) & 0xFF;
@@ -556,7 +559,8 @@ unsigned long write_file(File file, void *buf, unsigned long numbytes)
 	{ //Every other case.
 
 		read_sd_block(buffer, cur_block);
-		for (int i = current_pos % (SOFTWARE_DISK_BLOCK_SIZE-2); i < SOFTWARE_DISK_BLOCK_SIZE; i++) {
+		for (int i = current_pos % (SOFTWARE_DISK_BLOCK_SIZE - 2); i < SOFTWARE_DISK_BLOCK_SIZE; i++)
+		{
 			buffer[i + 2] = buf2[i];
 		}
 		buffer[0] = ((SOFTWARE_DISK_BLOCK_SIZE - 2) >> 8) & 0xFF;
@@ -566,9 +570,11 @@ unsigned long write_file(File file, void *buf, unsigned long numbytes)
 		cur_block++;
 		buf_pos += SOFTWARE_DISK_BLOCK_SIZE - 2;
 		current_pos += SOFTWARE_DISK_BLOCK_SIZE - 2;
-		while (numbytes - (current_pos - file->BytePosition) > SOFTWARE_DISK_BLOCK_SIZE - 2) { //While the write is writing full blocks
+		while (numbytes - (current_pos - file->BytePosition) > SOFTWARE_DISK_BLOCK_SIZE - 2)
+		{ //While the write is writing full blocks
 
-			for (int i = 0; i < SOFTWARE_DISK_BLOCK_SIZE; i++) {
+			for (int i = 0; i < SOFTWARE_DISK_BLOCK_SIZE; i++)
+			{
 				buffer[i + 2] = buf2[i + buf_pos];
 			}
 			buffer[0] = ((SOFTWARE_DISK_BLOCK_SIZE - 2) >> 8) & 0xFF;
@@ -581,20 +587,27 @@ unsigned long write_file(File file, void *buf, unsigned long numbytes)
 
 			//TODO: allocate additional blocks if needed.
 		}
-		for (unsigned int i = 0; i < SOFTWARE_DISK_BLOCK_SIZE; i++) { buffer[i] = 0; } //Zero the buffer
+		for (unsigned int i = 0; i < SOFTWARE_DISK_BLOCK_SIZE; i++)
+		{
+			buffer[i] = 0;
+		}																	 //Zero the buffer
 		unsigned short size = numbytes - (current_pos - file->BytePosition); //Number of bytes for the current block to write
 
-		if (size > get_block_used_bytes(cur_block)) { //If the remaining bytes to write will increase the size of the file
+		if (size > get_block_used_bytes(cur_block))
+		{ //If the remaining bytes to write will increase the size of the file
 			buffer[0] = (size >> 8) & 0xFF;
 			buffer[1] = size & 0xFF;
-			for (int i = 0; i < size; i++) {
+			for (int i = 0; i < size; i++)
+			{
 				buffer[i + 2] = buf2[i + buf_pos];
 			}
 			write_sd_block(buffer, cur_block);
 		}
-		else { //If the remaining bytes to write won't increase the size of the file.
+		else
+		{ //If the remaining bytes to write won't increase the size of the file.
 			read_sd_block(buffer, cur_block);
-			for (int i = 0; i < size; i++) {
+			for (int i = 0; i < size; i++)
+			{
 				buffer[i + 2] = buf2[i + buf_pos];
 			}
 			write_sd_block(buffer, cur_block);
@@ -631,7 +644,7 @@ int seek_file(File file, unsigned long bytepos)
 	}
 	else
 	{
-		if(bytepos > MAX_FILE_SIZE)
+		if (bytepos > MAX_FILE_SIZE)
 		{
 			fserror = FS_EXCEEDS_MAX_FILE_SIZE;
 			fs_print_error();
