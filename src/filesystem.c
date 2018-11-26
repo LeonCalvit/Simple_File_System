@@ -1,5 +1,5 @@
 // File system implementation for LSU 4103 filesystem assignment.
-// Written by Sam Miller and Leon Calvit, November 218
+// Written by Sam Miller and Leon Calvit, November 2018
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
