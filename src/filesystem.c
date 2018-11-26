@@ -483,7 +483,8 @@ void close_file(File file)
 	}
 
 	// TODO: write any needed changes to file
-	// TODO: set file state to closed
+
+	file->mode = Closed;
 	return;
 }
 
