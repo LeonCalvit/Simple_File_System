@@ -87,7 +87,7 @@ void init_fs()
 	//If software_disk_size isn't evenly divisible by 8, then this marks how many bits aren't used.
 	unusedBits = software_disk_size() % 8;
 
-	unsigned char *buffer = calloc(SOFTWARE_DISK_BLOCK_SIZE, 1);
+	unsigned char *buffer = malloc(SOFTWARE_DISK_BLOCK_SIZE);
 	unsigned short size;
 	if (read_sd_block(buffer, 0) == 0)
 	{
@@ -240,7 +240,7 @@ void write_fs_to_disk()
 		write_inode_to_disk(i);
 	}
 
-	unsigned char *buffer = calloc(SOFTWARE_DISK_BLOCK_SIZE, 1);
+	unsigned char *buffer = malloc(SOFTWARE_DISK_BLOCK_SIZE);
 	if (software_disk_size() > SOFTWARE_DISK_BLOCK_SIZE - 2)
 	{
 		//Write first part of bitVector to buffer
@@ -308,17 +308,17 @@ void flip_block_availability(unsigned long index)
 //Gets the number of used bytes for the specified block
 unsigned short get_block_used_bytes(long block_num)
 {
-	unsigned char *buffer = calloc(SOFTWARE_DISK_BLOCK_SIZE, sizeof(unsigned char));
-	if (read_sd_block(buffer, block_num) == 0)
+	unsigned char* buffer3 = malloc(SOFTWARE_DISK_BLOCK_SIZE);
+	if (read_sd_block(buffer3, block_num) == 0)
 	{
 		//Reads block into buffer, throws an error and returns if there was an error in reading the block
 		fserror = FS_IO_ERROR;
 		fs_print_error();
 		return 0;
 	}
-	unsigned short size = buffer[0] << 8;
-	size |= buffer[1];
-	free(buffer);
+	unsigned short size = buffer3[0] << 8;
+	size |= buffer3[1];
+	free(buffer3);
 	return size;
 }
 
@@ -330,7 +330,7 @@ void get_indirect_block_nums(struct INode *node, unsigned long *buf)
 		puts("Error: Indicated block has no indirect blocks.");
 		return;
 	}
-	unsigned long *indirect_block = calloc(SOFTWARE_DISK_BLOCK_SIZE, sizeof(unsigned char));
+	unsigned long *indirect_block = malloc(SOFTWARE_DISK_BLOCK_SIZE);
 	if (read_sd_block(indirect_block, node->indirectBlock) == 0)
 	{
 		//Reads block into buffer, throws an error and returns if there was an error in reading the block
@@ -399,7 +399,7 @@ unsigned long get_next_free_Inode()
 	init_inode(node);
 	for (int i = 3; i <= 2 + TOTAL_NUM_INODES; i++)
 	{
-		unsigned char *buffer = calloc(SOFTWARE_DISK_BLOCK_SIZE, sizeof(unsigned char));
+		unsigned char *buffer = malloc(SOFTWARE_DISK_BLOCK_SIZE);
 		read_sd_block(buffer, i);
 	}
 }
@@ -508,8 +508,9 @@ unsigned long read_file(File file, void *buf, unsigned long numbytes)
 		fs_print_error();
 		return 0;
 	}
-	unsigned char* buffer = calloc(SOFTWARE_DISK_BLOCK_SIZE, 1);
-	unsigned char* buf2 = buf;
+	unsigned char* buffer = malloc(SOFTWARE_DISK_BLOCK_SIZE);
+	unsigned char* buf2 = &buf;
+	
 	unsigned long current_pos_in_buf = file->BytePosition % (SOFTWARE_DISK_BLOCK_SIZE - 2); //Position of the cursor in the block
 	unsigned long bytes_read = 0;
 	unsigned long cur_block_index = file->BytePosition / (SOFTWARE_DISK_BLOCK_SIZE - 2);
@@ -519,10 +520,9 @@ unsigned long read_file(File file, void *buf, unsigned long numbytes)
 		read_sd_block(buffer, get_block_num_from_file(file, cur_block_index));
 		for (int i = current_pos_in_buf + 2; i < 2 + current_pos_in_buf + numbytes; i++)
 		{
-			buf2[bytes_read] = buffer[i];
+			((unsigned char*)buf)[bytes_read] = buffer[i];
 			bytes_read++;
 		}
-		
 	}
 	else
 	{
@@ -583,20 +583,16 @@ unsigned long write_file(File file, void *buf, unsigned long numbytes)
 		fs_print_error();
 		return 0;
 	}
-	if (file->BytePosition > file_length(file))
-	{
-		fserror = FS_IO_ERROR;
-		fs_print_error();
-		return 0;
-	}
+	
 	if (file->BytePosition + numbytes > (SOFTWARE_DISK_BLOCK_SIZE - 2) * (NUM_BLOCKS_IN_INODE + (SOFTWARE_DISK_BLOCK_SIZE - 2) / sizeof(unsigned long)))
 	{
 		fserror = FS_EXCEEDS_MAX_FILE_SIZE;
 		fs_print_error();
 		return 0;
 	}
-
-	unsigned char *buffer = calloc(SOFTWARE_DISK_BLOCK_SIZE, 1);
+	
+	//unsigned char *buffer = (unsigned char*)malloc(SOFTWARE_DISK_BLOCK_SIZE);
+	unsigned char* buffer = malloc(SOFTWARE_DISK_BLOCK_SIZE);
 	unsigned char *buf2 = buf; //Void pointers don't allow pointer arithmetic apparently? This is a simple workaround.
 	unsigned long current_pos = file->BytePosition;
 	unsigned long buf_pos = 0;
@@ -785,7 +781,7 @@ int delete_file(char *name)
 		return 0;
 	}
 
-	unsigned char *empty_buffer = calloc(SOFTWARE_DISK_BLOCK_SIZE, sizeof(unsigned char));
+	unsigned char *empty_buffer = calloc(SOFTWARE_DISK_BLOCK_SIZE, 1);
 	if (node->num_blocks < NUM_BLOCKS_IN_INODE)
 	{ //Block numbers aren't being stored in the indirect nodes, so deleting the INode is simpler;
 		//Goes through blocks of the INode and writes zeroes to them
